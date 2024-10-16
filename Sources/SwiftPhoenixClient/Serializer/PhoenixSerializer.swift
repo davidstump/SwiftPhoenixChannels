@@ -24,16 +24,25 @@ public class PhoenixSerializer: Serializer {
     
     public func encode(message: Message) -> String {
         switch message.payload {
-        case .json(let json):
-            let jsonArray = [
-                message.joinRef,
-                message.ref,
-                message.topic,
-                message.event,
-                json
-            ]
+           
+        case .dictionary(let dictionary):
             
-            return convertToString(encodable: jsonArray)
+            let data = Defaults.encode(dictionary)
+            guard let rawJson = try? JSONDecoder().decode(RawJsonValue.self, from: data) else {
+                preconditionFailure("Dictionary did not produce valid JSON")
+            }
+            
+            let serverMessage = CodableServerMessage(
+                joinRef: message.joinRef,
+                ref: message.ref,
+                topic: message.topic,
+                event: message.event,
+                payload: rawJson
+            )
+            
+
+            return convertToString(encodable: serverMessage)
+            
         default:
             preconditionFailure("Expected message to have a json payload.")
         }
@@ -81,7 +90,7 @@ public class PhoenixSerializer: Serializer {
             preconditionFailure("Could not convert text into valid jsonData. \(text)")
         }
         
-        let decodedMessage = try JSONDecoder().decode(DecodedMessage.self, from: jsonData)
+        let decodedMessage = try JSONDecoder().decode(CodableServerMessage.self, from: jsonData)
         
         let joinRef = decodedMessage.joinRef
         let ref = decodedMessage.ref
@@ -100,6 +109,7 @@ public class PhoenixSerializer: Serializer {
             }
             
             let responseAsJsonString = convertToString(rawJsonValue: response)
+            
             
             return Message.reply(
                 joinRef: joinRef,

@@ -596,13 +596,18 @@ public class Socket: PhoenixTransportDelegate {
         
         let callback: (() throws -> ()) = { [weak self] in
             guard let self else { return }
-            let body: [Any?] = [joinRef, ref, topic, event, payload]
-            let data = self.encode(body)
             
-            let msg = String(data: data, encoding: String.Encoding.utf8) ?? ""
-            
-            self.logItems("push", "Sending \(msg)" )
-            self.connection?.send(string: msg)
+            let message = Message.message(
+                joinRef: joinRef,
+                ref: ref,
+                topic: topic,
+                event: event,
+                payload: .dictionary(payload)
+            )
+
+            let text = serializer.encode(message: message)
+            self.logItems("push", "Sending \(text)" )
+            self.connection?.send(string: text)
         }
         
         /// If the socket is connected, then execute the callback immediately.

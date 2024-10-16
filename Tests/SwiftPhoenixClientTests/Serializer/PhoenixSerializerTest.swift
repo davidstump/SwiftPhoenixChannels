@@ -14,21 +14,22 @@ final class PhoenixSerializerTest {
     
     private let serializer: Serializer = PhoenixSerializer()
     
-    // - - - - - encode(.json) - - - - -
+    // - - - - - encode(.dictionary) - - - - -
     @Test func test_encodePush() throws {
         let message = Message.message(
             joinRef: "0",
             ref: "1",
             topic: "t",
             event: "e",
-            payload: .json("{\"foo\": 1}")
+            payload: .dictionary(["foo": 1])
         )
         let actual = serializer.encode(message: message)
         let expected = """
-        ["0","1","t","e","{\\"foo\\": 1}"]
+        ["0","1","t","e",{"foo":1}]
         """
         #expect(expected == actual)
     }
+    
     
     // - - - - - binaryEncode(.binary) - - - - -
     @Test func test_binaryEncode() {
@@ -84,7 +85,7 @@ final class PhoenixSerializerTest {
         #expect(message.topic == "topic")
         #expect(message.event == "event")
         #expect(message.status == nil)
-        #expect(message.payload == .json("{\"foo\":\"bar\"}"))
+        #expect(message.payload.asJson() == "{\"foo\":\"bar\"}")
     }
     
     @Test func test_decodeMessageWithNumbers() throws {
@@ -112,7 +113,7 @@ final class PhoenixSerializerTest {
         
         let message = try serializer.decode(text: text)
         
-        #expect(message.payload == .json("payload"))
+        #expect(message.payload.asJson() == "payload")
     }
     
     @Test func test_decodeReply() throws {
@@ -126,7 +127,7 @@ final class PhoenixSerializerTest {
         #expect(reply.topic == "topic")
         #expect(reply.event == "phx_reply")
         #expect(reply.status == "ok")
-        #expect(reply.payload == .json("foo"))
+        #expect(reply.payload.asJson() == "foo")
     }
     
     @Test func test_decodeReplyWithBody() throws {
@@ -136,7 +137,7 @@ final class PhoenixSerializerTest {
         
         let reply = try serializer.decode(text: text)
         
-        #expect(reply.payload == .json("{\"foo\":\"bar\"}"))
+        #expect(reply.payload.asJson() == "{\"foo\":\"bar\"}")
     }
     
     @Test func test_decodeBroadcast() throws {
@@ -150,7 +151,7 @@ final class PhoenixSerializerTest {
         #expect(broadcast.topic == "topic")
         #expect(broadcast.event == "event")
         #expect(broadcast.status == nil)
-        #expect(broadcast.payload == .json("{\"user\":\"foo\"}"))
+        #expect(broadcast.payload.asJson() == "{\"user\":\"foo\"}")
     }
     
     // - - - - - binaryDecode(data) - - - - -
@@ -191,7 +192,7 @@ final class PhoenixSerializerTest {
         #expect([0x01, 0x01] == binary)
     }
     
-    @Test func test_binaryDecode_broadcast() throws{
+    @Test func test_binaryDecode_broadcast() throws {
         // "\x02\x03\ntopsome-event\x01\x01"
         let bin: [UInt8] = [0x02, 0x03, 0x0A]
         + "topsome-event".utf8.map { UInt8($0) }

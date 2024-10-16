@@ -8,17 +8,17 @@
 
 import Foundation
 
-typealias EncodablePayload = Encodable & Sendable
-typealias DictionaryPayload = [String: any Any & Sendable]
+public typealias DictionaryPayload = [String: any Any & Sendable]
 
 
 ///
 /// Provides a messages payload as either a string or as binary data.
 ///
-public enum MessagePayload: Equatable {
+public enum MessagePayload {
     
     case binary(Data)
     case json(String)
+    case dictionary(DictionaryPayload)
     
     
     /// Force unwraps the enum as a binary. Throws if it was json
@@ -38,23 +38,6 @@ public enum MessagePayload: Equatable {
             string
         default:
             preconditionFailure("Expected payload to be json. Was data")
-        }
-    }
-    
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        switch lhs {
-        case .binary(let lhsData):
-            switch rhs {
-            case .binary(let rhsData): return lhsData == rhsData
-            default: return false
-            }
-        case .json(let lhsJson):
-            switch rhs {
-            case .json(let rhsJson):
-                return lhsJson == rhsJson
-            default: return false
-            }
         }
     }
 }

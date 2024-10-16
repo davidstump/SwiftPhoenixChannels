@@ -598,15 +598,9 @@ public class Channel {
                  payload: Payload = [:],
                  ref: String = "",
                  joinRef: String? = nil) {
-        
-        // Convert the dictionary into a json string. This is an intermitent
-        // step until a more robust solution is found
-        let data = Defaults.encode(payload)
-        let json = String(data: data, encoding: .utf8)!
-        
         self.trigger(
             event: event,
-            payload: .json(json),
+            payload: .dictionary(payload),
             ref: ref,
             joinRef: joinRef
         )
