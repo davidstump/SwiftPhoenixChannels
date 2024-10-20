@@ -150,10 +150,8 @@ class ChatRoomViewController: UIViewController {
         // Setup the Channel to receive and send messages
         let channel = socket.channel(topic, params: ["status": "joining"])
         channel.delegateOn("shout", to: self) { (self, message) in
-            let payload = message.payload.asJson()
-            
-            let data = payload.data(using: .utf8)!
-            let shout = try? self.jsonDecoder.decode(Shout.self, from: data)
+            let shout = try? self.jsonDecoder.decode(Shout.self,
+                                                     from: message.payload)
             
             self.shouts.append(shout!)
             

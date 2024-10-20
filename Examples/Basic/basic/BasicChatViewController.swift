@@ -143,10 +143,10 @@ class BasicChatViewController: UIViewController {
         }
         
         channel.delegateOn("new:msg", to: self) { (self, message) in
-            let payload = message.payload.asJson()
             
-            let data = payload.data(using: .utf8)!
-            guard let chat = try? JSONDecoder().decode(Chat.self, from: data) else { return }
+            guard let chat = try? JSONDecoder().decode(Chat.self,
+                                                       from: message.payload)
+            else { return }
             
             
             let newMessage = "[\(chat.username)] \(chat.body)"

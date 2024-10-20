@@ -83,6 +83,10 @@ public class Socket: PhoenixTransportDelegate {
     /// Serializer used to encode/decode between the clienet and the server.
     public var serializer: Serializer = PhoenixSerializer()
     
+    /// Customize how payloads are encoded before being sent to the server
+    public var encoder: PayloadEncoder = PhoenixPayloadEncoder()
+    
+    
     /// Override to provide custom encoding of data before writing to the socket
     public var encode: (Any) -> Data = Defaults.encode
     
@@ -595,14 +599,15 @@ public class Socket: PhoenixTransportDelegate {
                        joinRef: String? = nil) {
         
         let callback: (() throws -> ()) = { [weak self] in
-            guard let self else { return }
+            guard let self,
+                    let data = try? encoder.encode(payload) else { return }
             
             let message = Message.message(
                 joinRef: joinRef,
                 ref: ref,
                 topic: topic,
                 event: event,
-                payload: .dictionary(payload)
+                payload: data
             )
 
             let text = serializer.encode(message: message)

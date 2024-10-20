@@ -598,16 +598,19 @@ public class Channel {
                  payload: Payload = [:],
                  ref: String = "",
                  joinRef: String? = nil) {
+        let encoder = PhoenixPayloadEncoder()
+        let data = try? encoder.encode(payload)
+        
         self.trigger(
             event: event,
-            payload: .dictionary(payload),
+            payload: data!,
             ref: ref,
             joinRef: joinRef
         )
     }
     
     func trigger(event: String,
-                 payload: MessagePayload,
+                 payload: Data,
                  ref: String?,
                  joinRef: String? = nil) {
         let message = Message.message(

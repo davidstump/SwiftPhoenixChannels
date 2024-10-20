@@ -49,14 +49,19 @@ public struct Message {
     let status: String?
     
     /// The payload of the message to send or that was received.`
-    public let payload: MessagePayload
+    public let payload: Data
+    
+    /// Attempts to render the paylod as a readable string.
+    public var payloadString: String? {
+        String(data: payload, encoding: .utf8)
+    }
     
     static func reply(
         joinRef: String?,
         ref: String?,
         topic: String,
         status: String,
-        payload: MessagePayload
+        payload: Data
     ) -> Message {
         return Message(
             joinRef: joinRef,
@@ -73,7 +78,7 @@ public struct Message {
         ref: String?,
         topic: String,
         event: String,
-        payload: MessagePayload
+        payload: Data
     ) -> Message {
         return Message(
             joinRef: joinRef,
@@ -88,7 +93,7 @@ public struct Message {
     static func broadcast(
         topic: String,
         event: String,
-        payload: MessagePayload
+        payload: Data
     ) -> Message {
         return Message(
             joinRef: nil,

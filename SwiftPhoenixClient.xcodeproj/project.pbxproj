@@ -37,6 +37,7 @@
 		12EF620825524B6800A6EE9B /* DefaultSerializerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EF620325524B6800A6EE9B /* DefaultSerializerSpec.swift */; };
 		6322938E2C952508003EEDE1 /* RawJsonValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6322938D2C952508003EEDE1 /* RawJsonValue.swift */; };
 		632293902C952689003EEDE1 /* CodableServerMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6322938F2C952689003EEDE1 /* CodableServerMessage.swift */; };
+		634E20EC2CC4813D0037A570 /* PayloadEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634E20EB2CC4813D0037A570 /* PayloadEncoder.swift */; };
 		635669C4261631DC0068B665 /* URLSessionTransportSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 635669C3261631DC0068B665 /* URLSessionTransportSpec.swift */; };
 		638073472CBF3EE300F8986F /* Payload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 638073462CBF3EE300F8986F /* Payload.swift */; };
 		63ACBE9426D53DF500171582 /* HeartbeatTimerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63ACBE9326D53DF500171582 /* HeartbeatTimerSpec.swift */; };
@@ -112,6 +113,7 @@
 		12EF620325524B6800A6EE9B /* DefaultSerializerSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultSerializerSpec.swift; sourceTree = "<group>"; };
 		6322938D2C952508003EEDE1 /* RawJsonValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawJsonValue.swift; sourceTree = "<group>"; };
 		6322938F2C952689003EEDE1 /* CodableServerMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodableServerMessage.swift; sourceTree = "<group>"; };
+		634E20EB2CC4813D0037A570 /* PayloadEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayloadEncoder.swift; sourceTree = "<group>"; };
 		635669C3261631DC0068B665 /* URLSessionTransportSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionTransportSpec.swift; sourceTree = "<group>"; };
 		638073462CBF3EE300F8986F /* Payload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Payload.swift; sourceTree = "<group>"; };
 		63ACBE9326D53DF500171582 /* HeartbeatTimerSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartbeatTimerSpec.swift; sourceTree = "<group>"; };
@@ -306,6 +308,7 @@
 				63BBCF022B897D87004A16C9 /* PhoenixSerializer.swift */,
 				6322938D2C952508003EEDE1 /* RawJsonValue.swift */,
 				63BBCEFF2B897B0C004A16C9 /* Serializer.swift */,
+				634E20EB2CC4813D0037A570 /* PayloadEncoder.swift */,
 			);
 			path = Serializer;
 			sourceTree = "<group>";
@@ -490,6 +493,7 @@
 			files = (
 				6322938E2C952508003EEDE1 /* RawJsonValue.swift in Sources */,
 				12991DFB254C3EB800BB8650 /* Defaults.swift in Sources */,
+				634E20EC2CC4813D0037A570 /* PayloadEncoder.swift in Sources */,
 				12991E05254C3F3300BB8650 /* Channel.swift in Sources */,
 				63BBCF032B897D87004A16C9 /* PhoenixSerializer.swift in Sources */,
 				632293902C952689003EEDE1 /* CodableServerMessage.swift in Sources */,

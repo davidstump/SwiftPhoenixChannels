@@ -21,14 +21,14 @@ public class PhoenixSerializer: Serializer {
     private let KIND_BROADCAST: UInt8 = 2
     
     
-    
     public func encode(message: Message) -> String {
-        switch message.payload {
+//        switch message.payload {
            
-        case .dictionary(let dictionary):
+//        case .dictionary(let dictionary):
             
-            let data = Defaults.encode(dictionary)
-            guard let rawJson = try? JSONDecoder().decode(RawJsonValue.self, from: data) else {
+//            let data = Defaults.encode(dictionary)
+        guard let rawJson = try? JSONDecoder()
+            .decode(RawJsonValue.self, from: message.payload) else {
                 preconditionFailure("Dictionary did not produce valid JSON")
             }
             
@@ -43,14 +43,14 @@ public class PhoenixSerializer: Serializer {
 
             return convertToString(encodable: serverMessage)
             
-        default:
-            preconditionFailure("Expected message to have a json payload.")
-        }
+//        default:
+//            preconditionFailure("Expected message to have a json payload.")
+//        }
     }
     
     public func binaryEncode(message: Message) -> Data {
-        switch message.payload {
-        case .binary(let data):
+//        switch message.payload {
+//        case .binary(let data):
             var byteArray: [UInt8] = []
             
             // Add the KIND, which is always a PUSH from the client to the server
@@ -74,12 +74,12 @@ public class PhoenixSerializer: Serializer {
             
             byteArray.append(contentsOf: message.topic.utf8.map { UInt8($0) })
             byteArray.append(contentsOf: message.event.utf8.map { UInt8($0) })
-            byteArray.append(contentsOf: data)
+            byteArray.append(contentsOf: message.payload)
             
             return Data(byteArray)
-        default:
-            preconditionFailure("Expected message to have a binary payload.")
-        }
+//        default:
+//            preconditionFailure("Expected message to have a binary payload.")
+//        }
     }
     
     
@@ -108,33 +108,26 @@ public class PhoenixSerializer: Serializer {
                 throw SerializerError("Reply was missing valid response an status. \(text)")
             }
             
-            let responseAsJsonString = convertToString(rawJsonValue: response)
-            
-            
             return Message.reply(
                 joinRef: joinRef,
                 ref: ref,
                 topic: topic,
                 status: status,
-                payload: .json(responseAsJsonString)
+                payload: try encodeToData(rawJsonValue: response)
             )
         } else if joinRef != nil || ref != nil {
-            let payloadAsJsonString = convertToString(rawJsonValue: payload)
-            
             return Message.message(
                 joinRef: joinRef,
                 ref: ref,
                 topic: topic,
                 event: event,
-                payload: .json(payloadAsJsonString)
+                payload: try encodeToData(rawJsonValue: payload)
             )
         } else {
-            let payloadAsJsonString = convertToString(encodable: payload)
-            
             return Message.broadcast(
                 topic: topic,
                 event: event,
-                payload: .json(payloadAsJsonString)
+                payload: try encodeToData(rawJsonValue: payload)
                 
             )
         }
@@ -175,7 +168,8 @@ public class PhoenixSerializer: Serializer {
             ref: nil,
             topic: topic,
             event: event,
-            payload: .binary(data)        )
+            payload: data
+        )
     }
     
     private func decodeReply(buffer: [UInt8]) throws -> Message {
@@ -205,7 +199,7 @@ public class PhoenixSerializer: Serializer {
             ref: ref,
             topic: topic,
             status: event,
-            payload: .binary(data)
+            payload: data
         )
     }
     
@@ -227,8 +221,17 @@ public class PhoenixSerializer: Serializer {
         return Message.broadcast(
             topic: topic,
             event: event,
-            payload: .binary(data)
+            payload: data
         )
+    }
+    
+    private func encodeToData(rawJsonValue: RawJsonValue) throws -> Data {
+        switch rawJsonValue {
+        case .string(let rawString):
+            return rawString.data(using: .utf8)!
+        default:
+            return try JSONEncoder().encode(rawJsonValue)
+        }
     }
     
     private func convertToString(rawJsonValue: RawJsonValue) -> String {
