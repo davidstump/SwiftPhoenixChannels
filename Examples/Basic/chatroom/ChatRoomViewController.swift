@@ -167,11 +167,11 @@ class ChatRoomViewController: UIViewController {
         self.lobbyChannel = channel
         self.lobbyChannel?
             .join()
-            .delegateReceive("ok", to: self, callback: { (self, _) in
-                print("CHANNEL: rooms:lobby joined")
+            .delegateReceive("ok", to: self, callback: { (self, message) in
+                print("CHANNEL: rooms:lobby joined. status <\(message.status ?? "null")>")
             })
             .delegateReceive("error", to: self, callback: { (self, message) in
-                print("CHANNEL: rooms:lobby failed to join. \(message.payload)")
+                print("CHANNEL: rooms:lobby failed to join. payload <\(message.payloadString ?? "null")>  status <\(message.status ?? "null")> ")
             })
         
         self.socket.connect()

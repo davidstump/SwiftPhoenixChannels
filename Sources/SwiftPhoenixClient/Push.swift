@@ -260,8 +260,12 @@ public class Push {
         /// If there is no ref event, then there is nothing to trigger on the channel
         guard let refEvent = self.refEvent else { return }
         
-        var mutPayload = payload
-        mutPayload["status"] = status
-        self.channel?.trigger(event: refEvent, payload: mutPayload)
+//        var mutPayload = payload
+//        mutPayload["status"] = status
+        self.channel?.trigger(
+            event: refEvent,
+            payload: payload,
+            status: status
+        )
     }
 }

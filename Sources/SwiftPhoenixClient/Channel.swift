@@ -227,8 +227,9 @@ public class Channel {
                 ref: message.ref,
                 topic: self.topic,
                 event: self.replyEventName(ref),
+                payload: message.payload,
                 status: message.status,
-                payload: message.payload
+                pushAsBinary: false
             )
             
             self.trigger(message)
@@ -551,7 +552,7 @@ public class Channel {
             ChannelEvent.isLifecyleEvent(message.event)
         else { return true }
         
-        self.socket?.logItems("channel", "dropping outdated message", message.topic, message.event, message.payload, safeJoinRef)
+        self.socket?.logItems("channel", "dropping outdated message", message.topic, message.event, message.payloadString ?? "null", safeJoinRef)
         return false
     }
     
@@ -597,7 +598,8 @@ public class Channel {
     func trigger(event: String,
                  payload: Payload = [:],
                  ref: String = "",
-                 joinRef: String? = nil) {
+                 joinRef: String? = nil,
+                 status: String? = nil) {
         let encoder = PhoenixPayloadEncoder()
         let data = try? encoder.encode(payload)
         
@@ -605,20 +607,24 @@ public class Channel {
             event: event,
             payload: data!,
             ref: ref,
-            joinRef: joinRef
+            joinRef: joinRef,
+            status: status
         )
     }
     
     func trigger(event: String,
                  payload: Data,
                  ref: String?,
-                 joinRef: String? = nil) {
-        let message = Message.message(
+                 joinRef: String? = nil,
+                 status: String? = nil) {
+        let message = Message(
             joinRef: joinRef ?? self.joinRef,
             ref: ref,
             topic: self.topic,
             event: event,
-            payload: payload
+            payload: payload,
+            status: status,
+            pushAsBinary: false
         )
         
         self.trigger(message)
