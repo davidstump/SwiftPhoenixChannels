@@ -1,5 +1,5 @@
 //
-//  RawJsonValue.swift
+//  JsonElement.swift
 //  SwiftPhoenixClient
 //
 //  Created by Daniel Rees on 9/13/24.
@@ -10,15 +10,15 @@
 /// Allows for parsing an unknown payload value and preserving number precision
 /// when encoding the payload back to a JSON String
 ///
-enum RawJsonValue {
+enum JsonElement {
     case boolean(Bool)
     case number(Double)
     case string(String)
-    case array([RawJsonValue?])
-    case object([String: RawJsonValue])
+    case array([JsonElement?])
+    case object([String: JsonElement])
 }
 
-extension RawJsonValue: Codable {
+extension JsonElement: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
 
@@ -28,10 +28,10 @@ extension RawJsonValue: Codable {
             self = .number(numberValue)
         } else if let stringValue = try? container.decode(String.self) {
             self = .string(stringValue)
-        } else if let arrayValue = try? container.decode([RawJsonValue?].self) {
+        } else if let arrayValue = try? container.decode([JsonElement?].self) {
             self = .array(arrayValue)
         } else {
-            let objectValue = try container.decode([String: RawJsonValue].self)
+            let objectValue = try container.decode([String: JsonElement].self)
             self = .object(objectValue)
         }
     }

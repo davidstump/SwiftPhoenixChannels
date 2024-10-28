@@ -17,7 +17,7 @@ struct OutboundMessage: Codable {
     let ref: String?
     let topic: String
     let event: String
-    let payload: RawJsonValue
+    let payload: JsonElement
     
     func encode(to encoder: any Encoder) throws {
         var container = encoder.unkeyedContainer()

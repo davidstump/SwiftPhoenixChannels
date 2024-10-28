@@ -20,7 +20,7 @@ struct InboundMessage: Decodable {
     let ref: String?
     let topic: String
     let event: String
-    let payload: RawJsonValue
+    let payload: JsonElement
     
     init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
@@ -28,6 +28,6 @@ struct InboundMessage: Decodable {
         ref = try? container.decode(String?.self)
         topic = try container.decode(String.self)
         event = try container.decode(String.self)
-        payload = try container.decode(RawJsonValue.self)
+        payload = try container.decode(JsonElement.self)
     }
 }
