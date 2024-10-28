@@ -22,64 +22,50 @@ public class PhoenixSerializer: Serializer {
     
     
     public func encode(message: Message) -> String {
-//        switch message.payload {
-           
-//        case .dictionary(let dictionary):
-            
-//            let data = Defaults.encode(dictionary)
         guard let rawJson = try? JSONDecoder()
             .decode(RawJsonValue.self, from: message.payload) else {
-                preconditionFailure("Dictionary did not produce valid JSON")
-            }
-            
-            let serverMessage = CodableServerMessage(
-                joinRef: message.joinRef,
-                ref: message.ref,
-                topic: message.topic,
-                event: message.event,
-                payload: rawJson
-            )
-            
-
-            return convertToString(encodable: serverMessage)
-            
-//        default:
-//            preconditionFailure("Expected message to have a json payload.")
-//        }
+            preconditionFailure("Message data did not produce valid JSON")
+        }
+        
+        let serverMessage = CodableServerMessage(
+            joinRef: message.joinRef,
+            ref: message.ref,
+            topic: message.topic,
+            event: message.event,
+            payload: rawJson
+        )
+        
+        
+        return convertToString(encodable: serverMessage)
     }
     
     public func binaryEncode(message: Message) -> Data {
-//        switch message.payload {
-//        case .binary(let data):
-            var byteArray: [UInt8] = []
-            
-            // Add the KIND, which is always a PUSH from the client to the server
-            byteArray.append(KIND_PUSH)
-            
-            // Add the lengths of each piece of the message
-            byteArray.append(UInt8(message.joinRef?.utf8.count ?? 0) )
-            byteArray.append(UInt8(message.ref?.utf8.count ?? 0) )
-            byteArray.append(UInt8(message.topic.utf8.count) )
-            byteArray.append(UInt8(message.event.utf8.count) )
-            
-            
-            // Add the message's meta fields + payload
-            if let joinRef = message.joinRef {
-                byteArray.append(contentsOf: joinRef.utf8.map { UInt8($0) })
-            }
-            
-            if let ref = message.ref {
-                byteArray.append(contentsOf: ref.utf8.map { UInt8($0) })
-            }
-            
-            byteArray.append(contentsOf: message.topic.utf8.map { UInt8($0) })
-            byteArray.append(contentsOf: message.event.utf8.map { UInt8($0) })
-            byteArray.append(contentsOf: message.payload)
-            
-            return Data(byteArray)
-//        default:
-//            preconditionFailure("Expected message to have a binary payload.")
-//        }
+        var byteArray: [UInt8] = []
+        
+        // Add the KIND, which is always a PUSH from the client to the server
+        byteArray.append(KIND_PUSH)
+        
+        // Add the lengths of each piece of the message
+        byteArray.append(UInt8(message.joinRef?.utf8.count ?? 0) )
+        byteArray.append(UInt8(message.ref?.utf8.count ?? 0) )
+        byteArray.append(UInt8(message.topic.utf8.count) )
+        byteArray.append(UInt8(message.event.utf8.count) )
+        
+        
+        // Add the message's meta fields + payload
+        if let joinRef = message.joinRef {
+            byteArray.append(contentsOf: joinRef.utf8.map { UInt8($0) })
+        }
+        
+        if let ref = message.ref {
+            byteArray.append(contentsOf: ref.utf8.map { UInt8($0) })
+        }
+        
+        byteArray.append(contentsOf: message.topic.utf8.map { UInt8($0) })
+        byteArray.append(contentsOf: message.event.utf8.map { UInt8($0) })
+        byteArray.append(contentsOf: message.payload)
+        
+        return Data(byteArray)
     }
     
     

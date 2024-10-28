@@ -594,20 +594,19 @@ public class Socket: PhoenixTransportDelegate {
     /// - parameter joinRef: Optional. Defaults to nil
     internal func push(topic: String,
                        event: String,
-                       payload: Payload,
+                       payload: Data,
                        ref: String? = nil,
                        joinRef: String? = nil) {
         
         let callback: (() throws -> ()) = { [weak self] in
-            guard let self,
-                    let data = try? encoder.encode(payload) else { return }
+            guard let self else { return }
             
             let message = Message.message(
                 joinRef: joinRef,
                 ref: ref,
                 topic: topic,
                 event: event,
-                payload: data
+                payload: payload
             )
 
             let text = serializer.encode(message: message)
@@ -811,7 +810,7 @@ public class Socket: PhoenixTransportDelegate {
         self.pendingHeartbeatRef = self.makeRef()
         self.push(topic: "phoenix",
                   event: ChannelEvent.heartbeat,
-                  payload: [:],
+                  payload: Defaults.emptyPayload,
                   ref: self.pendingHeartbeatRef)
     }
     

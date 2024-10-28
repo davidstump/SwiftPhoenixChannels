@@ -31,8 +31,8 @@ public class Push {
     /// The event, for example `phx_join`
     public let event: String
     
-    /// The payload, for example ["user_id": "abc123"]
-    public var payload: Payload
+    /// The payload, for example ["user_id": "abc123"], expressed as Data
+    public var payload: Data
     
     /// The push timeout. Default is 10.0 seconds
     public var timeout: TimeInterval
@@ -68,8 +68,9 @@ public class Push {
     /// - parameter timeout: Optional. The push timeout. Default is 10.0s
     init(channel: Channel,
          event: String,
-         payload: Payload = [:],
-         timeout: TimeInterval = Defaults.timeoutInterval) {
+         payload: Data,
+         timeout: TimeInterval
+    ) {
         self.channel = channel
         self.event = event
         self.payload = payload

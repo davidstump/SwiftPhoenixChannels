@@ -65,7 +65,10 @@ public class Channel {
     
     /// The params sent when joining the channel
     public var params: Payload {
-        didSet { self.joinPush.payload = params }
+        didSet {
+            let data = try! self.socket?.encoder.encode(params)
+            self.joinPush.payload = data!
+        }
     }
     
     /// The Socket that the channel belongs to
@@ -103,7 +106,11 @@ public class Channel {
     /// - parameter topic: Topic of the Channel
     /// - parameter params: Optional. Parameters to send when joining.
     /// - parameter socket: Socket that the channel is a part of
-    init(topic: String, params: [String: Any] = [:], socket: Socket) {
+    init(
+        topic: String,
+        params: [String: Any] = [:],
+        socket: Socket
+    ) {
         self.state = ChannelState.closed
         self.topic = topic
         self.params = params
@@ -139,10 +146,12 @@ public class Channel {
         })
         if let ref = onOpenRef { self.stateChangeRefs.append(ref) }
         
+        
         // Setup Push Event to be sent when joining
+        let data = try! self.socket?.encoder.encode(params)
         self.joinPush = Push(channel: self,
                              event: ChannelEvent.join,
-                             payload: self.params,
+                             payload: data!,
                              timeout: self.timeout)
         
         /// Handle when a response is received after join()
@@ -169,9 +178,11 @@ public class Channel {
             // log that the channel timed out
             self.socket?.logItems("channel", "timeout \(self.topic) \(self.joinRef ?? "") after \(self.timeout)s")
             
+            
             // Send a Push to the server to leave the channel
             let leavePush = Push(channel: self,
                                  event: ChannelEvent.leave,
+                                 payload: Defaults.emptyPayload,
                                  timeout: self.timeout)
             leavePush.send()
             
@@ -459,6 +470,9 @@ public class Channel {
                      payload: Payload,
                      timeout: TimeInterval = Defaults.timeoutInterval) -> Push {
         guard joinedOnce else { fatalError("Tried to push \(event) to \(self.topic) before joining. Use channel.join() before pushing events") }
+        guard let payload = try? self.socket?.encoder.encode(payload) else {
+            fatalError("Tried to push \(payload) to \(self.topic) but could not encode.")
+        }
         
         let pushEvent = Push(channel: self,
                              event: event,
@@ -510,6 +524,7 @@ public class Channel {
         // Push event to send to the server
         let leavePush = Push(channel: self,
                              event: ChannelEvent.leave,
+                             payload: Defaults.emptyPayload,
                              timeout: timeout)
         
         // Perform the same behavior if successfully left the channel

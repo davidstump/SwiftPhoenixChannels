@@ -43,6 +43,9 @@ public class Defaults {
   }
 
   public static let vsn = "2.0.0"
+    
+  static let emptyPayload: Data = try! PhoenixPayloadEncoder().encode([:])
+    
   
   /// Default encode function, utilizing JSONSerialization.data
   public static let encode: (Any) -> Data = { json in
