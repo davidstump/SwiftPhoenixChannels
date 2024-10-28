@@ -20,23 +20,28 @@ public class PhoenixSerializer: Serializer {
     private let KIND_REPLY: UInt8 = 1
     private let KIND_BROADCAST: UInt8 = 2
     
+    private let payloadEncoder: PayloadEncoder
+    private let payloadDecoder: PayloadDecoder
     
-    public func encode(message: Message) -> String {
-        guard let rawJson = try? JSONDecoder()
-            .decode(RawJsonValue.self, from: message.payload) else {
-            preconditionFailure("Message data did not produce valid JSON")
-        }
+    init(payloadEncoder: PayloadEncoder = PhoenixPayloadEncoder(),
+         payloadDecoder: PayloadDecoder = PhoenixPayloadDecoder()) {
+        self.payloadEncoder = payloadEncoder
+        self.payloadDecoder = payloadDecoder
+    }
+    
+    public func encode(message: Message) throws -> String {
+        let json = try payloadDecoder.decode(RawJsonValue.self, from: message.payload)
         
-        let serverMessage = CodableServerMessage(
+        let serverMessage = OutboundMessage(
             joinRef: message.joinRef,
             ref: message.ref,
             topic: message.topic,
             event: message.event,
-            payload: rawJson
+            payload: json
         )
         
         
-        return convertToString(encodable: serverMessage)
+        return try convertToString(encodable: serverMessage)
     }
     
     public func binaryEncode(message: Message) -> Data {
@@ -76,13 +81,13 @@ public class PhoenixSerializer: Serializer {
             preconditionFailure("Could not convert text into valid jsonData. \(text)")
         }
         
-        let decodedMessage = try JSONDecoder().decode(CodableServerMessage.self, from: jsonData)
+        let inboundMesage = try payloadDecoder.decode(InboundMessage.self, from: jsonData)
         
-        let joinRef = decodedMessage.joinRef
-        let ref = decodedMessage.ref
-        let topic = decodedMessage.topic
-        let event = decodedMessage.event
-        let payload = decodedMessage.payload
+        let joinRef = inboundMesage.joinRef
+        let ref = inboundMesage.ref
+        let topic = inboundMesage.topic
+        let event = inboundMesage.event
+        let payload = inboundMesage.payload
         
         // For phx_reply events, parse the payload from {"response": payload, "status": "ok"}.
         // Note that `payload` can be any primitive or another object
@@ -216,26 +221,28 @@ public class PhoenixSerializer: Serializer {
         case .string(let rawString):
             return rawString.data(using: .utf8)!
         default:
-            return try JSONEncoder().encode(rawJsonValue)
+            return try self.payloadEncoder.encode(rawJsonValue)
         }
     }
     
-    private func convertToString(rawJsonValue: RawJsonValue) -> String {
+    private func convertToString(rawJsonValue: RawJsonValue) throws -> String {
         switch rawJsonValue {
         case .string(let rawString):
             return rawString
         default:
-            return convertToString(encodable: rawJsonValue)
+            return try convertToString(encodable: rawJsonValue)
         }
     }
     
-    private func convertToString(encodable: Encodable & Sendable) -> String {
+    private func convertToString(encodable: Encodable & Sendable) throws -> String {
+        let jsonData = try self.payloadEncoder.encode(encodable)
+        
         guard
-            let jsonData = try? JSONEncoder().encode(encodable),
             let jsonString = String(data: jsonData, encoding: .utf8)
         else {
             preconditionFailure("Expected json object to serialize to a String. \(encodable)")
         }
+        
         
         return jsonString
     }

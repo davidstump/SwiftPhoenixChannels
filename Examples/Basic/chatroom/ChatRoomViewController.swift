@@ -163,7 +163,7 @@ class ChatRoomViewController: UIViewController {
             }
         }
         
-        // Now connect the socket and join the channel
+        // Now connect the socSerket and join the channel
         self.lobbyChannel = channel
         self.lobbyChannel?
             .join()

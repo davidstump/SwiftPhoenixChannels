@@ -609,7 +609,7 @@ public class Socket: PhoenixTransportDelegate {
                 payload: payload
             )
 
-            let text = serializer.encode(message: message)
+            let text = try serializer.encode(message: message)
             self.logItems("push", "Sending \(text)" )
             self.connection?.send(string: text)
         }

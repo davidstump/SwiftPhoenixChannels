@@ -26,7 +26,7 @@ final class PhoenixSerializerTest {
             event: "e",
             payload: payload
         )
-        let actual = serializer.encode(message: message)
+        let actual = try serializer.encode(message: message)
         let expected = """
         ["0","1","t","e",{"foo":1}]
         """

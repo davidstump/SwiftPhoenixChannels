@@ -16,7 +16,7 @@ public protocol Serializer {
     ///
     /// - parameter message: `MessageV6` with a json payload to encode
     /// - returns: Raw text to send back to the server
-    func encode(message: Message) -> String
+    func encode(message: Message) throws -> String
     
     ///
     /// Encodes a `MessageV6` into `Data` to be sent back to a Phoenix server as binary data
