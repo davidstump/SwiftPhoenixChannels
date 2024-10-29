@@ -20,6 +20,13 @@
 
 import Foundation
 
+///
+/// Type Alias that defines a callback that takes which attempt number is being
+/// tried and returns a `TimerInterval` corresponding to the attempt.
+///
+public typealias SteppedBackoff = (_ tries: Int) -> TimeInterval
+
+
 /// A collection of default values and behaviors used across the Client
 public class Defaults {
     
@@ -34,14 +41,14 @@ public class Defaults {
     public static let heartbeatLeeway: DispatchTimeInterval = .milliseconds(10)
     
     /// Default reconnect algorithm for the socket
-    public static let reconnectSteppedBackOff: (Int) -> TimeInterval = { tries in
+    public static let reconnectSteppedBackOff: SteppedBackoff = { tries in
         guard tries > 0 else { return 0.01 }
         guard tries < 10 else { return 5.0 }
         return [0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 1.0, 2.0][tries - 1]
     }
     
     /// Default rejoin algorithm for individual channels
-    public static let rejoinSteppedBackOff: (Int) -> TimeInterval = { tries in
+    public static let rejoinSteppedBackOff: SteppedBackoff = { tries in
         guard tries > 0 else  { return 1 }
         guard tries < 4 else { return 10 }
         return [1, 2, 5][tries - 1]

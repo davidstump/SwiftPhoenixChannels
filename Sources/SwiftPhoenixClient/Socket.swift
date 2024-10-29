@@ -62,6 +62,9 @@ public class Socket: PhoenixTransportDelegate {
     /// The fully qualified socket URL
     public private(set) var endPointUrl: URL
     
+    /// Custom headers to be added to the socket connection request
+    public var headers: [String : Any] = [:]
+    
     /// Resolves to return the `paramsClosure` result at the time of calling.
     /// If the `Socket` was created with static params, then those will be
     /// returned every time.
@@ -92,9 +95,6 @@ public class Socket: PhoenixTransportDelegate {
     /// Timeout to use when opening connections
     public var timeout: TimeInterval = Defaults.timeoutInterval
     
-    /// Custom headers to be added to the socket connection request
-    public var headers: [String : Any] = [:]
-    
     /// Interval between sending a heartbeat
     public var heartbeatInterval: TimeInterval = Defaults.heartbeatInterval
     
@@ -102,33 +102,30 @@ public class Socket: PhoenixTransportDelegate {
     public var heartbeatLeeway: DispatchTimeInterval = Defaults.heartbeatLeeway
     
     /// Interval between socket reconnect attempts, in seconds
-    public var reconnectAfter: (Int) -> TimeInterval = Defaults.reconnectSteppedBackOff
+    public var reconnectAfter: SteppedBackoff = Defaults.reconnectSteppedBackOff
     
     /// Interval between channel rejoin attempts, in seconds
-    public var rejoinAfter: (Int) -> TimeInterval = Defaults.rejoinSteppedBackOff
+    public var rejoinAfter: SteppedBackoff = Defaults.rejoinSteppedBackOff
     
-    /// The optional function to receive logs
+    /// If true, enabled debug logging. Defaults false. Alternatively, if given
+    /// a custom `logger`, the `debug` flag will be ignored.
+    public var debug: Bool = false {
+        didSet {
+            guard self.logger == nil else { return }
+        }
+    }
+    
+    /// The optional function for specialized logging, ie:
+    ///
+    ///     socket.logger = { (kind, msg, data) in
+    ///         // some custom logging
+    ///     }
+    ///
     public var logger: ((String) -> Void)?
     
     /// Disables heartbeats from being sent. Default is false.
     public var skipHeartbeat: Bool = false
-    
-    /// Enable/Disable SSL certificate validation. Default is false. This
-    /// must be set before calling `socket.connect()` in order to be applied
-    public var disableSSLCertValidation: Bool = false
-    
-#if os(Linux)
-#else
-    /// Configure custom SSL validation logic, eg. SSL pinning. This
-    /// must be set before calling `socket.connect()` in order to apply.
-    //  public var security: SSLTrustValidator?
-    
-    /// Configure the encryption used by your client by setting the
-    /// allowed cipher suites supported by your server. This must be
-    /// set before calling `socket.connect()` in order to apply.
-    public var enabledSSLCipherSuites: [SSLCipherSuite]?
-#endif
-    
+        
     
     //----------------------------------------------------------------------
     // MARK: - Private Attributes
