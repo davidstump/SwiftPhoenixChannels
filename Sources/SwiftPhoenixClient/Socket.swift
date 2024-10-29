@@ -58,10 +58,7 @@ public class Socket: PhoenixTransportDelegate {
     /// initialization. The URL endpoint will be modified by the Socket to
     /// include `"/websocket"` if missing.
     public let endPoint: String
-    
-    /// The fully qualified socket URL
-    public private(set) var endPointUrl: URL
-    
+        
     /// Custom headers to be added to the socket connection request
     public var headers: [String : Any] = [:]
     
@@ -81,7 +78,7 @@ public class Socket: PhoenixTransportDelegate {
     private let transport: ((URL) -> PhoenixTransport)
     
     /// Phoenix serializer version, defaults to "2.0.0"
-    public let vsn: String
+    public var vsn: String = Defaults.vsn
     
     /// Serializer used to encode/decode between the clienet and the server.
     public var serializer: Serializer = PhoenixSerializer()
@@ -162,38 +159,25 @@ public class Socket: PhoenixTransportDelegate {
     //----------------------------------------------------------------------
     // MARK: - Initialization
     //----------------------------------------------------------------------
-    @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
-    public convenience init(_ endPoint: String,
-                            params: Payload? = nil,
-                            vsn: String = Defaults.vsn) {
+    public convenience init(_ endPoint: String, params: Payload? = nil) {
         self.init(endPoint: endPoint,
                   transport: { url in return URLSessionTransport(url: url) },
-                  paramsClosure: { params },
-                  vsn: vsn)
+                  params: { params })
     }
     
-    @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
-    public convenience init(_ endPoint: String,
-                            paramsClosure: PayloadClosure?,
-                            vsn: String = Defaults.vsn) {
+    public convenience init(_ endPoint: String, params: PayloadClosure?) {
         self.init(endPoint: endPoint,
                   transport: { url in return URLSessionTransport(url: url) },
-                  paramsClosure: paramsClosure,
-                  vsn: vsn)
+                  params: params)
     }
     
     
     public init(endPoint: String,
                 transport: @escaping ((URL) -> PhoenixTransport),
-                paramsClosure: PayloadClosure? = nil,
-                vsn: String = Defaults.vsn) {
+                params: PayloadClosure? = nil) {
         self.transport = transport
-        self.paramsClosure = paramsClosure
+        self.paramsClosure = params
         self.endPoint = endPoint
-        self.vsn = vsn
-        self.endPointUrl = Socket.buildEndpointUrl(endpoint: endPoint,
-                                                   paramsClosure: paramsClosure,
-                                                   vsn: vsn)
         
         self.reconnectTimer = TimeoutTimer()
         self.reconnectTimer.callback.delegate(to: self) { (self) in
@@ -216,13 +200,54 @@ public class Socket: PhoenixTransportDelegate {
     // MARK: - Public
     //----------------------------------------------------------------------
     /// - return: The socket protocol, wss or ws
-    public var websocketProtocol: String {
-        switch endPointUrl.scheme {
-        case "https": return "wss"
-        case "http": return "ws"
-        default: return endPointUrl.scheme ?? ""
-        }
+    public var websocketProtocol: String? {
+        return endPointUrl.scheme
     }
+    
+    /// The fully qualified socket URL
+    public var endPointUrl: URL {
+        guard
+            let url = URL(string: self.endPoint),
+            var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        else { fatalError("Malformed URL: \(self.endPoint)") }
+        
+        let wsScheme = switch urlComponents.scheme {
+        case "wss": "wss"
+        case "https": "wss"
+        default: "ws"
+        }
+        
+    // Override the scheme to always be `ws` or `wss`
+        urlComponents.scheme = wsScheme
+        
+        // Ensure that the URL ends with "/websocket
+        if !urlComponents.path.contains("/websocket") {
+            // Do not duplicate '/' in the path
+            if urlComponents.path.last != "/" {
+                urlComponents.path.append("/")
+            }
+            
+            // append 'websocket' to the path
+            urlComponents.path.append("websocket")
+            
+        }
+        
+        urlComponents.queryItems = [URLQueryItem(name: "vsn", value: vsn)]
+        
+        // If there are parameters, append them to the URL
+        if let params = self.params {
+            urlComponents.queryItems?.append(contentsOf: params.map {
+                URLQueryItem(name: $0.key, value: String(describing: $0.value))
+            })
+        }
+        
+        guard let qualifiedUrl = urlComponents.url else {
+            fatalError("Malformed URL while adding parameters")
+        }
+        
+        return qualifiedUrl
+    }
+    
     
     /// - return: True if the socket is connected
     public var isConnected: Bool {
@@ -243,12 +268,6 @@ public class Socket: PhoenixTransportDelegate {
         
         // Reset the close status when attempting to connect
         self.closeStatus = nil
-        
-        // We need to build this right before attempting to connect as the
-        // parameters could be built upon demand and change over time
-        self.endPointUrl = Socket.buildEndpointUrl(endpoint: self.endPoint,
-                                                   paramsClosure: self.paramsClosure,
-                                                   vsn: vsn)
         
         self.connection = self.transport(self.endPointUrl)
         self.connection?.delegate = self
@@ -716,40 +735,7 @@ public class Socket: PhoenixTransportDelegate {
     internal func removeFromSendBuffer(ref: String) {
         self.sendBuffer.removeAll { $0.ref == ref }
     }
-    
-    /// Builds a fully qualified socket `URL` from `endPoint` and `params`.
-    internal static func buildEndpointUrl(endpoint: String, paramsClosure params: PayloadClosure?, vsn: String) -> URL {
-        guard
-            let url = URL(string: endpoint),
-            var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        else { fatalError("Malformed URL: \(endpoint)") }
-        
-        // Ensure that the URL ends with "/websocket
-        if !urlComponents.path.contains("/websocket") {
-            // Do not duplicate '/' in the path
-            if urlComponents.path.last != "/" {
-                urlComponents.path.append("/")
-            }
-            
-            // append 'websocket' to the path
-            urlComponents.path.append("websocket")
-            
-        }
-        
-        urlComponents.queryItems = [URLQueryItem(name: "vsn", value: vsn)]
-        
-        // If there are parameters, append them to the URL
-        if let params = params?() {
-            urlComponents.queryItems?.append(contentsOf: params.map {
-                URLQueryItem(name: $0.key, value: String(describing: $0.value))
-            })
-        }
-        
-        guard let qualifiedUrl = urlComponents.url
-        else { fatalError("Malformed URL while adding parameters") }
-        return qualifiedUrl
-    }
-    
+
     
     // Leaves any channel that is open that has a duplicate topic
     internal func leaveOpenTopic(topic: String) {
