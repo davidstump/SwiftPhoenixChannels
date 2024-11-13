@@ -58,6 +58,9 @@ public class Push {
     /// The event that is associated with the reference ID of the Push
     var refEvent: String?
     
+    /// Determines if the data payload should be pushed as a binary instead of a string
+    let asBinary: Bool
+    
     
     
     /// Initializes a Push
@@ -69,7 +72,8 @@ public class Push {
     init(channel: Channel,
          event: String,
          payload: Data,
-         timeout: TimeInterval
+         timeout: TimeInterval,
+         asBinary: Bool = false
     ) {
         self.channel = channel
         self.event = event
@@ -80,6 +84,7 @@ public class Push {
         self.receiveHooks = [:]
         self.sent = false
         self.ref = nil
+        self.asBinary = asBinary
     }
     
     
@@ -104,7 +109,8 @@ public class Push {
             event: self.event,
             payload: self.payload,
             ref: self.ref,
-            joinRef: channel?.joinRef
+            joinRef: channel?.joinRef,
+            asBinary: self.asBinary
         )
     }
     

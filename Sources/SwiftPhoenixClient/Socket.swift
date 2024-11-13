@@ -104,14 +104,7 @@ public class Socket: PhoenixTransportDelegate {
     /// Interval between channel rejoin attempts, in seconds
     public var rejoinAfter: SteppedBackoff = Defaults.rejoinSteppedBackOff
     
-    /// If true, enabled debug logging. Defaults false. Alternatively, if given
-    /// a custom `logger`, the `debug` flag will be ignored.
-    public var debug: Bool = false {
-        didSet {
-            guard self.logger == nil else { return }
-        }
-    }
-    
+    // TODO: The docs do not match the functionality
     /// The optional function for specialized logging, ie:
     ///
     ///     socket.logger = { (kind, msg, data) in
@@ -608,7 +601,8 @@ public class Socket: PhoenixTransportDelegate {
                        event: String,
                        payload: Data,
                        ref: String? = nil,
-                       joinRef: String? = nil) {
+                       joinRef: String? = nil,
+                       asBinary: Bool = false) {
         
         let callback: (() throws -> ()) = { [weak self] in
             guard let self else { return }
@@ -618,12 +612,20 @@ public class Socket: PhoenixTransportDelegate {
                 ref: ref,
                 topic: topic,
                 event: event,
-                payload: payload
+                payload: payload,
+                pushAsBinary: asBinary
             )
 
-            let text = try serializer.encode(message: message)
-            self.logItems("push", "Sending \(text)" )
-            self.connection?.send(string: text)
+            if asBinary {
+                let binary = serializer.binaryEncode(message: message)
+                self.logItems("push", "Sending binary \(binary)" )
+                self.connection?.send(data: binary)
+                
+            } else {
+                let text = try serializer.encode(message: message)
+                self.logItems("push", "Sending \(text)" )
+                self.connection?.send(string: text)
+            }
         }
         
         /// If the socket is connected, then execute the callback immediately.

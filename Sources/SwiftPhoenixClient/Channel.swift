@@ -459,7 +459,7 @@ public class Channel {
     /// Example:
     ///
     ///     channel
-    ///         .push("event", payload: ["message": "hello")
+    ///         .push("event", payload: ["message": "hello"])
     ///         .receive("ok") { _ in { print("message sent") }
     ///
     /// - parameter event: Event to push
@@ -478,6 +478,37 @@ public class Channel {
                              event: event,
                              payload: payload,
                              timeout: timeout)
+        if canPush {
+            pushEvent.send()
+        } else {
+            pushEvent.startTimeout()
+            pushBuffer.append(pushEvent)
+        }
+        
+        return pushEvent
+    }
+    
+    /// Pushes a binary payload to the Channel
+    ///
+    /// Example:
+    ///
+    ///     channel
+    ///         .binaryPush("event", payload: Data())
+    ///         .receive("ok") { _ in { print("message sent") }
+    ///
+    /// - parameter event: Event to push
+    /// - parameter payload: Binary data to push
+    /// - parameter timeout: Optional timeout
+    public func binaryPush(_ event: String,
+                           payload: Data,
+                           timeout: TimeInterval = Defaults.timeoutInterval) -> Push {
+        guard joinedOnce else { fatalError("Tried to push \(event) to \(self.topic) before joining. Use channel.join() before pushing events") }
+        
+        let pushEvent = Push(channel: self,
+                             event: event,
+                             payload: payload,
+                             timeout: timeout,
+                             asBinary: true)
         if canPush {
             pushEvent.send()
         } else {
