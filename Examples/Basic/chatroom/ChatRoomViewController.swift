@@ -86,10 +86,7 @@ class ChatRoomViewController: UIViewController {
         // Create and send the payload
         let payload = ["name": username, "message": messageInput.text!]
         
-        let binaryPayload = try! JSONSerialization.data(withJSONObject: payload)
-        
-        self.lobbyChannel?.binaryPush("shout", payload: binaryPayload)
-//        self.lobbyChannel?.push("shout", payload: payload)
+        self.lobbyChannel?.push("shout", payload: payload)
         
         // Clear the text intput
         self.messageInput.text = ""

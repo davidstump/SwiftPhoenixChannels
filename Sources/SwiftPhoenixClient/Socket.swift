@@ -612,8 +612,7 @@ public class Socket: PhoenixTransportDelegate {
                 ref: ref,
                 topic: topic,
                 event: event,
-                payload: payload,
-                pushAsBinary: asBinary
+                payload: payload
             )
 
             if asBinary {

@@ -54,9 +54,6 @@ public struct Message {
     /// The reply status as a string
     public let status: String?
     
-    /// If true, the message will be pushed out as binary
-    let pushAsBinary: Bool
-    
     /// Attempts to render the paylod as a readable string.
     public var payloadString: String? {
         String(data: payload, encoding: .utf8)
@@ -76,8 +73,7 @@ public struct Message {
             topic: topic,
             event: ChannelEvent.reply,
             payload: payload,
-            status: status,
-            pushAsBinary: false
+            status: status
         )
     }
     
@@ -86,8 +82,7 @@ public struct Message {
         ref: String?,
         topic: String,
         event: String,
-        payload: Data,
-        pushAsBinary: Bool = false
+        payload: Data
     ) -> Message {
         return Message(
             joinRef: joinRef,
@@ -95,8 +90,7 @@ public struct Message {
             topic: topic,
             event: event,
             payload: payload,
-            status: nil,
-            pushAsBinary: pushAsBinary
+            status: nil
         )
     }
     
@@ -111,8 +105,7 @@ public struct Message {
             topic: topic,
             event: event,
             payload: payload,
-            status: nil,
-            pushAsBinary: false
+            status: nil
         )
     }
 }

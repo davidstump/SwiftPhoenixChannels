@@ -239,8 +239,7 @@ public class Channel {
                 topic: self.topic,
                 event: self.replyEventName(ref),
                 payload: message.payload,
-                status: message.status,
-                pushAsBinary: false
+                status: message.status
             )
             
             self.trigger(message)
@@ -669,8 +668,7 @@ public class Channel {
             topic: self.topic,
             event: event,
             payload: payload,
-            status: status,
-            pushAsBinary: false
+            status: status
         )
         
         self.trigger(message)
