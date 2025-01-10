@@ -151,7 +151,13 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
   
   /// The ongoing task. Assigned during `connect()`
   private var task: URLSessionWebSocketTask? = nil
-  
+
+  /// Holds the current receive task
+  private var receiveMesageTask: Task<Void, Never>? {
+      didSet {
+          oldValue?.cancel()
+      }
+  }
   
   /**
    Initializes a `Transport` layer built using URLSession's WebSocket
@@ -192,6 +198,7 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
   
   deinit {
     self.delegate = nil
+    receiveMesageTask?.cancel()
   }
   
   
@@ -276,29 +283,28 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
   
   // MARK: - Private
   private func receive() {
-    self.task?.receive { [weak self] result in
-      guard let self = self else { return }
-        
-      switch result {
-      case .success(let message):
-        switch message {
-        case .data:
-          print("Data received. This method is unsupported by the Client")
-        case .string(let text):
-          self.delegate?.onMessage(message: text)
-        default:
-          fatalError("Unknown result was received. [\(result)]")
-        }
-        
-        // Since `.receive()` is only good for a single message, it must
-        // be called again after a message is received in order to
-        // received the next message.
-        self.receive()
-      case .failure(let error):
-        print("Error when receiving \(error)")
-        self.abnormalErrorReceived(error, response: nil)
+    receiveMesageTask = Task { [weak self] in
+      guard let self else { return }
+        do {
+            let message = try await task?.receive()
+            switch message {
+            case .data:
+                print("Data received. This method is unsupported by the Client")
+            case .string(let text):
+                delegate?.onMessage(message: text)
+            default:
+                fatalError("Nil message received.")
+            }
+              
+            // Since `.receive()` is only good for a single message, it must
+            // be called again after a message is received in order to
+            // received the next message.
+            receive()
+          } catch {
+              print("Error when receiving \(error)")
+              abnormalErrorReceived(error, response: nil)
+          }
       }
-    }
   }
   
   private func abnormalErrorReceived(_ error: Error, response: URLResponse?) {
