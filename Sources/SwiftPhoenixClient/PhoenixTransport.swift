@@ -153,7 +153,7 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
   private var task: URLSessionWebSocketTask? = nil
 
   /// Holds the current receive task
-  private var receiveMesageTask: Task<Void, Never>? {
+  private var receiveMessageTask: Task<Void, Never>? {
       didSet {
           oldValue?.cancel()
       }
@@ -198,7 +198,7 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
   
   deinit {
     self.delegate = nil
-    receiveMesageTask?.cancel()
+    receiveMessageTask?.cancel()
   }
   
   
@@ -283,7 +283,7 @@ open class URLSessionTransport: NSObject, PhoenixTransport, URLSessionWebSocketD
   
   // MARK: - Private
   private func receive() {
-    receiveMesageTask = Task { [weak self] in
+    receiveMessageTask = Task { [weak self] in
       guard let self else { return }
         do {
             let message = try await task?.receive()
