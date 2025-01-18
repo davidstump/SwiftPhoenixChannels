@@ -5,10 +5,9 @@ import PackageDescription
 let package = Package(
     name: "SwiftPhoenixClient",
     platforms: [
-        .macOS(.v10_12),
-        .iOS(.v10),
-        .tvOS(.v10),
-        .watchOS(.v3)
+        .macOS(.v10_15),
+        .iOS(.v13),
+        .tvOS(.v13),
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.

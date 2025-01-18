@@ -6,6 +6,8 @@
 //  Copyright © 2024 SwiftPhoenixClient. All rights reserved.
 //
 
+import Foundation
+
 /// Converts JSON received from the server into Messages and Messages into JSON to be sent to
 /// the Server
 public protocol Serializer {

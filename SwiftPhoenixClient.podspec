@@ -15,20 +15,14 @@ Pod::Spec.new do |s|
   SwiftPhoenixClient is a Swift port of phoenix.js, abstracting away the details
   of the Phoenix Channels library and providing a near identical experience
   to connect to your Phoenix WebSockets on iOS.
-
-  RxSwift extensions exist as well when subscribing to channel events.
-
-  A default Transport layer is implmenented for iOS 13 or later. If targeting
-  an earlier iOS version, please see the StarscreamSwiftPhoenixClient extention.
   EOS
   s.homepage         = "https://github.com/davidstump/SwiftPhoenixClient"
   s.license          = { :type => "MIT", :file => "LICENSE" }
   s.author           = { "David Stump" => "david@davidstump.net" }
   s.source           = { :git => "https://github.com/davidstump/SwiftPhoenixClient.git", :tag => s.version.to_s }
-  s.ios.deployment_target     = '11.0'
-  s.osx.deployment_target     = '10.13'
-  s.tvos.deployment_target    = '11.0'
-  s.watchos.deployment_target = '4.0'
+  s.ios.deployment_target     = '13.0'
+  s.osx.deployment_target     = '10.15'
+  s.tvos.deployment_target    = '13.0'
 
   s.swift_version = '5.0'
   s.source_files  = "Sources/SwiftPhoenixClient/"
