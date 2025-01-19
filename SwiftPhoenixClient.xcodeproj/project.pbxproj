@@ -43,6 +43,7 @@
 		634398502CD009F800A2B9AC /* SocketTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6343984F2CD009F800A2B9AC /* SocketTest.swift */; };
 		634E20EC2CC4813D0037A570 /* PayloadEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634E20EB2CC4813D0037A570 /* PayloadEncoder.swift */; };
 		635669C4261631DC0068B665 /* URLSessionTransportSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 635669C3261631DC0068B665 /* URLSessionTransportSpec.swift */; };
+		637475D12D3D86B400DC4653 /* MessageHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 637475D02D3D86B400DC4653 /* MessageHeader.swift */; };
 		63ACBE9426D53DF500171582 /* HeartbeatTimerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63ACBE9326D53DF500171582 /* HeartbeatTimerSpec.swift */; };
 		63BBCF032B897D87004A16C9 /* Serializer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63BBCF022B897D87004A16C9 /* Serializer.swift */; };
 		63BBCF052B897DEF004A16C9 /* SerializerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63BBCF042B897DEF004A16C9 /* SerializerTest.swift */; };
@@ -121,6 +122,7 @@
 		6343984F2CD009F800A2B9AC /* SocketTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketTest.swift; sourceTree = "<group>"; };
 		634E20EB2CC4813D0037A570 /* PayloadEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayloadEncoder.swift; sourceTree = "<group>"; };
 		635669C3261631DC0068B665 /* URLSessionTransportSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionTransportSpec.swift; sourceTree = "<group>"; };
+		637475D02D3D86B400DC4653 /* MessageHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageHeader.swift; sourceTree = "<group>"; };
 		63ACBE9326D53DF500171582 /* HeartbeatTimerSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartbeatTimerSpec.swift; sourceTree = "<group>"; };
 		63B526842656CF9600289719 /* Starscream.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Starscream.xcframework; path = Carthage/Build/Starscream.xcframework; sourceTree = "<group>"; };
 		63B5268D2656CFFE00289719 /* RxSwift.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = RxSwift.xcframework; path = Carthage/Build/RxSwift.xcframework; sourceTree = "<group>"; };
@@ -301,6 +303,7 @@
 			isa = PBXGroup;
 			children = (
 				12991DFA254C3EB800BB8650 /* Defaults.swift */,
+				637475D02D3D86B400DC4653 /* MessageHeader.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -507,6 +510,7 @@
 			files = (
 				6322938E2C952508003EEDE1 /* JsonElement.swift in Sources */,
 				12991DFB254C3EB800BB8650 /* Defaults.swift in Sources */,
+				637475D12D3D86B400DC4653 /* MessageHeader.swift in Sources */,
 				634E20EC2CC4813D0037A570 /* PayloadEncoder.swift in Sources */,
 				12991E05254C3F3300BB8650 /* Channel.swift in Sources */,
 				63BBCF032B897D87004A16C9 /* Serializer.swift in Sources */,
