@@ -32,7 +32,7 @@ public protocol Serializer {
     /// - parameter text: The raw `String` from a Phoenix server
     /// - returns: The `SocketMessage` created from the raw `String`
     /// - throws: `preconditionFailure` if the text could not be converted to a `SocketMessage`
-    func decode(text: String) throws -> Message
+    func decode(text: String) throws -> DecodedMessage
     
 
     /// Decodes binary  `Data` from a Phoenix server into a `SocketMessage` structure
@@ -40,7 +40,7 @@ public protocol Serializer {
     /// - parameter data: The binary `Data` from a Phoenix server
     /// - returns The `SocketMessage` created from the raw `Data`
     /// - throws `preconditionFailure` if the data could not be converted to a `SocketMessage`
-    func binaryDecode(data: Data) throws -> Message
+    func binaryDecode(data: Data) throws -> DecodedMessage
     
 }
 
@@ -113,58 +113,62 @@ public class PhoenixSerializer: Serializer {
     }
     
     
-    public func decode(text: String) throws -> Message {
+    public func decode(text: String) throws -> DecodedMessage {
         guard
             let jsonData = text.data(using: .utf8)
         else {
             throw PhxError.serializerError(reason: .dataFromStringFailed(string: text))
         }
         
-        let inboundMesage = try payloadDecoder.decode(InboundMessage.self, from: jsonData)
+        let header = try payloadDecoder.decode(MessageHeader.self, from: jsonData)
         
-        let joinRef = inboundMesage.joinRef
-        let ref = inboundMesage.ref
-        let topic = inboundMesage.topic
-        let event = inboundMesage.event
-        let payload = inboundMesage.payload
+//        let inboundMesage = try payloadDecoder.decode(InboundMessage.self, from: jsonData)
+        
+        let joinRef = header.joinRef
+        let ref = header.ref
+        let topic = header.topic
+        let event = header.event
         
         // For phx_reply events, parse the payload from {"response": payload, "status": "ok"}.
         // Note that `payload` can be any primitive or another object
-        if event == ChannelEvent.reply, case .object(let payloadMap) = payload  {
+        if event == ChannelEvent.reply {
             guard
-                let response = payloadMap["response"],
-                case .string(let status) = payloadMap["status"]
+                let status = header.status
             else {
                 throw PhxError.serializerError(reason: .invalidReplyStructure(string: text))
             }
             
-            return Message.reply(
+            return DecodedMessage(
                 joinRef: joinRef,
                 ref: ref,
                 topic: topic,
+                event: ChannelEvent.reply,
                 status: status,
-                payload: try encodeToData(jsonElement: response)
+                payload: .undetermined(jsonData)
             )
         } else if joinRef != nil || ref != nil {
-            return Message.message(
+            return DecodedMessage(
                 joinRef: joinRef,
                 ref: ref,
                 topic: topic,
                 event: event,
-                payload: try encodeToData(jsonElement: payload)
+                status: nil,
+                payload: .undetermined(jsonData)
             )
         } else {
-            return Message.broadcast(
+            return DecodedMessage(
+                joinRef: nil,
+                ref: nil,
                 topic: topic,
                 event: event,
-                payload: try encodeToData(jsonElement: payload)
-                
+                status: nil,
+                payload: .undetermined(jsonData)
             )
         }
     }
     
     
-    public func binaryDecode(data: Data) throws -> Message {
+    public func binaryDecode(data: Data) throws -> DecodedMessage {
         let binary = [UInt8](data)
         return switch binary[0] {
         case KIND_PUSH: try decodePush(buffer: binary)
@@ -178,7 +182,7 @@ public class PhoenixSerializer: Serializer {
     }
     
     // MARK: - Private -
-    private func decodePush(buffer: [UInt8]) throws -> Message {
+    private func decodePush(buffer: [UInt8]) throws -> DecodedMessage {
         let joinRefSize = Int(buffer[1])
         let topicSize = Int(buffer[2])
         let eventSize = Int(buffer[3])
@@ -196,16 +200,17 @@ public class PhoenixSerializer: Serializer {
         offset += eventSize
         let data = Data(buffer[offset ..< buffer.count])
         
-        return Message.message(
+        return DecodedMessage(
             joinRef: joinRef,
             ref: nil,
             topic: topic,
             event: event,
-            payload: data
+            status: nil,
+            payload: .determined(data)
         )
     }
     
-    private func decodeReply(buffer: [UInt8]) throws -> Message {
+    private func decodeReply(buffer: [UInt8]) throws -> DecodedMessage {
         let joinRefSize = Int(buffer[1])
         let refSize = Int(buffer[2])
         let topicSize = Int(buffer[3])
@@ -227,16 +232,17 @@ public class PhoenixSerializer: Serializer {
         let data = Data(buffer[offset ..< buffer.count])
         
         // for binary messages, payload = {status: event, response: data}
-        return Message.reply(
+        return DecodedMessage(
             joinRef: joinRef,
             ref: ref,
             topic: topic,
+            event: ChannelEvent.reply,
             status: event,
-            payload: data
+            payload: .determined(data)
         )
     }
     
-    private func decodeBroadcast(buffer: [UInt8]) throws -> Message {
+    private func decodeBroadcast(buffer: [UInt8]) throws -> DecodedMessage {
         let topicSize = Int(buffer[1])
         let eventSize = Int(buffer[2])
         var offset = HEADER_LENGTH + 2
@@ -251,10 +257,13 @@ public class PhoenixSerializer: Serializer {
         offset += eventSize
         let data = Data(buffer[offset ..< buffer.count])
         
-        return Message.broadcast(
+        return DecodedMessage(
+            joinRef: nil,
+            ref: nil,
             topic: topic,
             event: event,
-            payload: data
+            status: nil,
+            payload: .determined(data)
         )
     }
     

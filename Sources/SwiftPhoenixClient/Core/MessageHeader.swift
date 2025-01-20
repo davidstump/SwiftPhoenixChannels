@@ -52,6 +52,35 @@ struct MessageHeader: Decodable {
     }
 }
 
+public struct DecodedMessage {
+    
+    /// The unique string ref when joining
+    let joinRef: String?
+    
+    /// The unique string ref
+    let ref: String?
+    
+    /// The string topic or topic:subtopic pair namespace, for example
+    /// "messages", "messages:123"
+    let topic: String
+    
+    /// The string event name, for example "phx_join"
+    let event: String
+    
+    /// The reply status as a string
+    let status: String?
+    
+    /// If determined, then the data is the payload from the serializer.
+    /// If undetermined, then the payload must be parsed from the data
+    let payload: MessagePayload
+}
+
+enum MessagePayload {
+   case determined(Data)
+   case undetermined(Data)
+}
+
+
 struct ReplyWrapper: Decodable {
     let status: String
 }
