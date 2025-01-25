@@ -45,6 +45,25 @@ protocol BindingV2 {
     ) throws
 }
 
+struct DecodedMessageBinding: BindingV2 {
+    
+    /// The event that the Binding is bound to
+    let event: String
+    
+    /// The reference number of the Binding
+    let ref: Int
+    
+    /// The callback to be triggered
+    let callback: (DecodedMessage) -> Void
+    
+    func trigger(message: DecodedMessage,
+                 payloadDecoder: any PayloadDecoder,
+                 payloadEncoder: any PayloadEncoder) throws {
+        guard event == message.event else { return }
+        self.callback(message)
+    }
+    
+}
 
 struct RefBinding: BindingV2 {
     
@@ -86,10 +105,6 @@ struct RefBinding: BindingV2 {
             // and return a Message to the callback.
             let array = try payloadDecoder.decodeJsonObject(from: incomingMessageData) as! [Any]
             let payloadJsonObject = array[4]
-            
-            if message.event == "presence_state" {
-                print("Going to throw")
-            }
             
             if message.event == ChannelEvent.reply {
                 guard
@@ -514,6 +529,24 @@ public class Channel {
             event: event,
             ref: ref,
             type: type,
+            callback: callback
+        )
+        
+        self.syncBindings.append(binding)
+        return ref
+    }
+    
+    @discardableResult
+    internal func onDecodedMessage(
+        _ event: String,
+        callback: @escaping (DecodedMessage) -> Void
+    ) -> Int {
+        let ref = bindingRef
+        self.bindingRef = ref + 1
+        
+        let binding = DecodedMessageBinding(
+            event: event,
+            ref: ref,
             callback: callback
         )
         
