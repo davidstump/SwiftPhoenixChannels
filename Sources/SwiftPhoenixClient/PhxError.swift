@@ -24,6 +24,9 @@ public enum PhxError: Error {
         /// Attempted to decode a binary message but the KIND was unknown
         case invalidBinaryKind(string: String)
         
+        /// The received message could not be parsed as a channels message (i.e. "[join_ref, ref, topic, event, payload]")
+        case invalidStructure(string: String)
+        
         /// Whle decoding, topic was missing
         case decodeMissingTopic
         

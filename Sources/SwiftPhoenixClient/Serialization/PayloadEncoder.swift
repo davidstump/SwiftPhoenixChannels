@@ -18,9 +18,16 @@ public protocol PayloadEncoder {
     
     func encode(_ dictionary: [String: Any]) throws -> Data
     
+    func encode(any jsonObject: Any) throws -> Data
+    
+    
 }
 
 public class PhoenixPayloadEncoder: PayloadEncoder {
+    public func encode(any jsonObject: Any) throws -> Data {
+            try JSONSerialization.data(withJSONObject: jsonObject, options: .fragmentsAllowed)
+        }
+    
     public func encode(_ encodable: any Encodable) throws -> Data {
         return try JSONEncoder().encode(encodable)
     }

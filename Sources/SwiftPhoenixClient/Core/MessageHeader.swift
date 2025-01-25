@@ -75,9 +75,48 @@ public struct DecodedMessage {
     let payload: MessagePayload
 }
 
+public struct TypedMessage<T: Codable>: Codable {
+    let joinRef: String?
+    let ref: String?
+    let topic: String
+    let event: String
+    public let status: String?
+    public let payload: T
+    
+    init(
+        message: DecodedMessage,
+        payload: T
+    ) {
+        self.joinRef = message.joinRef
+        self.ref = message.ref
+        self.topic = message.topic
+        self.event = message.event
+        self.status = message.status
+        self.payload = payload
+    }
+    
+    
+    public init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        joinRef = try? container.decode(String?.self)
+        ref = try? container.decode(String?.self)
+        topic = try container.decode(String.self)
+        event = try container.decode(String.self)
+        
+        if event == ChannelEvent.reply {
+            let wrapper = try container.decode(TypedReplyWrapper<T>.self)
+            status = wrapper.status
+            payload = wrapper.payload
+        } else {
+            status = nil
+            payload = try container.decode(T.self)
+        }
+    }
+}
+
 enum MessagePayload {
-   case determined(Data)
-   case undetermined(Data)
+    case determined(Data)
+    case undetermined(Data)
 }
 
 
@@ -85,25 +124,30 @@ struct ReplyWrapper: Decodable {
     let status: String
 }
 
+struct TypedReplyWrapper<T: Codable>: Decodable {
+    let status: String
+    let payload: T
+}
+
 protocol BindingProtocol {
     func trigger(_ message: Message) throws
 }
 
-struct RefBinding: BindingProtocol {
-    
-    /// The event that the Binding is bound to
-    let event: String
-    
-    /// The reference number of the Binding
-    let ref: Int
-    
-    /// The callback to be triggered
-    let callback: MessageHandler
-    
-    func trigger(_ message: Message) throws {
-        callback(message)
-    }
-}
+//struct RefBinding: BindingProtocol {
+//
+//    /// The event that the Binding is bound to
+//    let event: String
+//
+//    /// The reference number of the Binding
+//    let ref: Int
+//
+//    /// The callback to be triggered
+//    let callback: MessageHandler
+//
+//    func trigger(_ message: Message) throws {
+//        callback(message)
+//    }
+//}
 
 struct TypedBindingProtocol<T: Codable>: BindingProtocol {
     
@@ -119,7 +163,7 @@ struct TypedBindingProtocol<T: Codable>: BindingProtocol {
     /// The callback to be triggered
     let callback: (T) -> Void
     
-
+    
     func trigger(_ message: Message) throws {
         let decodedPayload = try JSONDecoder().decode(type, from: message.payload)
         callback(decodedPayload)
@@ -149,15 +193,3 @@ struct TypedBindingProtocol<T: Codable>: BindingProtocol {
 //}
 //
 //
-//public func on<T: Codable>(
-//    _ event: String,
-//    type: T.Type,
-//    callback: @escaping (T) -> Void) -> Int {
-//        let ref = bindingRef
-//        self.bindingRef = ref + 1
-//
-//        let binding = TypedBindingProtocol(event: event, ref: ref, type: type, callback: callback)
-//        self.syncBindings.append(binding)
-//
-//        return ref
-//}

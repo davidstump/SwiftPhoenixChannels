@@ -166,6 +166,14 @@ class ChatRoomViewController: UIViewController {
             }
         }
         
+        channel.on("shout", type: Shout.self) { [weak self] typedMessage in
+            guard let self else { return }
+            
+            self.shouts.append(typedMessage.payload)
+            
+        }
+        
+        
         // Now connect the socSerket and join the channel
         self.lobbyChannel = channel
         self.lobbyChannel?

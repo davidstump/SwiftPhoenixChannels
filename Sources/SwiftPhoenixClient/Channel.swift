@@ -37,6 +37,137 @@ struct Binding {
 }
 
 
+protocol BindingV2 {
+    func trigger(
+        message: DecodedMessage,
+        payloadDecoder: PayloadDecoder,
+        payloadEncoder: PayloadEncoder
+    ) throws
+}
+
+
+struct RefBinding: BindingV2 {
+    
+    /// The event that the Binding is bound to
+    let event: String
+    
+    /// The reference number of the Binding
+    let ref: Int
+    
+    /// The callback to be triggered
+    let callback: MessageHandler
+    
+    func trigger(
+        message: DecodedMessage,
+        payloadDecoder: any PayloadDecoder,
+        payloadEncoder: any PayloadEncoder
+    ) throws {
+        // Only trigger if the binding event matches the message event
+        guard message.event == event else { return }
+        
+        // Decode the payload at the last possible moment
+        switch message.payload {
+        case .determined(let data):
+            let message = Message(
+                joinRef: message.joinRef,
+                ref: message.ref,
+                topic: message.topic,
+                event: message.event,
+                payload: data,
+                status: message.status
+            )
+            
+            callback(message)
+            
+        case .undetermined(let incomingMessageData):
+            // incomingMessageData here is the entire received message raw text,
+            // represented as data. Use JsonSerialization to parse out the data
+            // as an Any JsonObject, pluck out the `payload`, and then construct
+            // and return a Message to the callback.
+            let array = try payloadDecoder.decodeJsonObject(from: incomingMessageData) as! [Any]
+            let payloadJsonObject = array[4]
+            
+            if message.event == "presence_state" {
+                print("Going to throw")
+            }
+            
+            if message.event == ChannelEvent.reply {
+                guard
+                    let payload = payloadJsonObject as? [String: Any],
+                    let response = payload["response"]
+                else {
+                    let text = String(data: incomingMessageData, encoding: .utf8) ?? "unparsable"
+                    throw PhxError.serializerError(reason: .invalidReplyStructure(string: text))
+                }
+                
+                let payloadData = try payloadEncoder.encode(any: response)
+                let message = Message(
+                    joinRef: message.joinRef,
+                    ref: message.ref,
+                    topic: message.topic,
+                    event: ChannelEvent.reply,
+                    payload: payloadData,
+                    status: message.status
+                )
+                
+                callback(message)
+            } else {
+                let payloadData = try payloadEncoder.encode(any: payloadJsonObject)
+                
+                let message = Message(
+                    joinRef: message.joinRef,
+                    ref: message.ref,
+                    topic: message.topic,
+                    event: message.event,
+                    payload: payloadData,
+                    status: nil
+                )
+                callback(message)
+            }
+        }
+    }
+}
+
+
+struct TypedBinding<T: Codable>: BindingV2 {
+
+    /// The event that the Binding is bound to
+    let event: String
+    
+    /// The reference number of the Binding
+    let ref: Int
+    
+    /// The Type to decode to
+    let type: T.Type
+    
+    /// The callback to be triggered
+    let callback: (TypedMessage<T>) -> Void
+    
+    func trigger(
+        message: DecodedMessage,
+        payloadDecoder: any PayloadDecoder,
+        payloadEncoder: any PayloadEncoder
+    ) throws {
+        // Only trigger if the binding event matches the message event
+        guard message.event == event else { return }
+        
+        switch message.payload {
+        case .determined(let payloadData):
+            let payload = try payloadDecoder.decode(type, from: payloadData)
+            let typedMessage = TypedMessage(message: message, payload: payload)
+            callback(typedMessage)
+            
+        case .undetermined(let incomingMessageData):
+            let typedMessage = try payloadDecoder.decode(TypedMessage<T>.self,
+                                                         from: incomingMessageData)
+            callback(typedMessage)
+        }
+    }
+}
+
+
+
+
 ///
 /// Represents a Channel which is bound to a topic
 ///
@@ -82,6 +213,8 @@ public class Channel {
     /// Collection of event bindings
     let syncBindingsDel: SynchronizedArray<Binding>
     
+    let syncBindings: SynchronizedArray<BindingV2>
+    
     /// Tracks event binding ref counters
     var bindingRef: Int
     
@@ -118,6 +251,7 @@ public class Channel {
         self.params = params
         self.socket = socket
         self.syncBindingsDel = SynchronizedArray()
+        self.syncBindings = SynchronizedArray()
         self.bindingRef = 0
         self.timeout = socket.timeout
         self.joinedOnce = false
@@ -279,6 +413,8 @@ public class Channel {
         return message
     }
     
+    public var onInboundMessage: (_ message: DecodedMessage) -> DecodedMessage = { $0 }
+    
     /// Joins the channel
     ///
     /// - parameter timeout: Optional. Defaults to Channel's timeout
@@ -358,8 +494,30 @@ public class Channel {
         let ref = bindingRef
         self.bindingRef = ref + 1
         
-        self.syncBindingsDel.append(Binding(event: event, ref: ref, callback: callback))
+        let binding = RefBinding(event: event, ref: ref, callback: callback)
+        self.syncBindings.append(binding)
+//        self.syncBindingsDel.append(Binding(event: event, ref: ref, callback: callback))
         
+        return ref
+    }
+    
+    @discardableResult
+    public func on<T: Codable>(
+        _ event: String,
+        type: T.Type,
+        callback: @escaping (TypedMessage<T>) -> Void
+    ) -> Int {
+        let ref = bindingRef
+        self.bindingRef = ref + 1
+        
+        let binding = TypedBinding(
+            event: event,
+            ref: ref,
+            type: type,
+            callback: callback
+        )
+        
+        self.syncBindings.append(binding)
         return ref
     }
     
@@ -522,7 +680,7 @@ public class Channel {
     // MARK: - Internal
     //----------------------------------------------------------------------
     /// Checks if an event received by the Socket belongs to this Channel
-    func isMember(_ message: Message) -> Bool {
+    func isMember(_ message: DecodedMessage) -> Bool {
         // Return false if the message's topic does not match the Channel's topic
         guard message.topic == self.topic else { return false }
         
@@ -532,7 +690,7 @@ public class Channel {
             ChannelEvent.isLifecyleEvent(message.event)
         else { return true }
         
-        self.socket?.logItems("channel", "dropping outdated message", message.topic, message.event, message.payloadString ?? "null", safeJoinRef)
+        self.socket?.logItems("channel", "dropping outdated message", message.topic, message.event, safeJoinRef)
         return false
     }
     
@@ -567,6 +725,28 @@ public class Channel {
             }
         }
     }
+    
+    func triggerV2(_ decodedMessage: DecodedMessage) {
+        let decoder = self.socket?.decoder ?? PhoenixPayloadDecoder()
+        let encoder = self.socket?.encoder ?? PhoenixPayloadEncoder()
+        let handledMessage = self.onInboundMessage(decodedMessage)
+        
+        self.syncBindings.forEach { binding in
+            do {
+                try binding.trigger(
+                    message: handledMessage,
+                    payloadDecoder: decoder,
+                    payloadEncoder: encoder
+                )
+            } catch {
+                print("TODO: Couldn't trigger message", error)
+                print("--- ", error)
+                print("--- ", decodedMessage)
+            }
+        }
+    }
+    
+    
     
     /// Triggers an event to the correct event bindings created by
     //// `channel.on("event")`.

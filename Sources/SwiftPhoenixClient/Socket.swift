@@ -575,17 +575,18 @@ public class Socket: PhoenixTransportDelegate {
         self.stateChangeCallbacks.error.forEach({ $0.callback(error, response) })
     }
     
-    internal func onConnectionMessage(_ message: Message) {
+    internal func onConnectionMessage(_ message: DecodedMessage) {
         // Clear heartbeat ref, preventing a heartbeat timeout disconnect
         if message.ref == pendingHeartbeatRef { pendingHeartbeatRef = nil }
         
         // Dispatch the message to all channels that belong to the topic
         self.channels
             .filter( { $0.isMember(message) } )
-            .forEach( { $0.trigger(message) } )
+            .forEach( { $0.triggerV2(message) } )
         
         // Inform all onMessage callbacks of the message
-        self.stateChangeCallbacks.message.forEach({ $0.callback(message) })
+        // TODO: DecodedMessage
+//        self.stateChangeCallbacks.message.forEach({ $0.callback(message) })
     }
     
     /// Triggers an error event to all of the connected Channels
@@ -702,26 +703,26 @@ public class Socket: PhoenixTransportDelegate {
             self.logItems("receive: Unable to parse binary: \(data)")
             return
         }
-        
-        let data = switch decodedMessage.payload {
-        case .determined(let data):
-            data
-        case .undetermined(let data):
-            data
-        }
-        
-        // TODO: Payload here could be undetermined. Need to move this to trigger
-        let message = Message(
-            joinRef: decodedMessage.joinRef,
-            ref: decodedMessage.ref,
-            topic: decodedMessage.topic,
-            event: decodedMessage.event,
-            payload: data,
-            status: decodedMessage.status)
+//        
+//        let data = switch decodedMessage.payload {
+//        case .determined(let data):
+//            data
+//        case .undetermined(let data):
+//            data
+//        }
+//        
+//        // TODO: Payload here could be undetermined. Need to move this to trigger
+//        let message = Message(
+//            joinRef: decodedMessage.joinRef,
+//            ref: decodedMessage.ref,
+//            topic: decodedMessage.topic,
+//            event: decodedMessage.event,
+//            payload: data,
+//            status: decodedMessage.status)
         
         self.logItems("receive ", data)
         DispatchQueue.main.async {
-            self.onConnectionMessage(message)
+            self.onConnectionMessage(decodedMessage)
         }
     }
     
@@ -730,25 +731,25 @@ public class Socket: PhoenixTransportDelegate {
             self.logItems("receive: Unable to parse JSON: \(string)")
             return
         }
-        
-        let data = switch decodedMessage.payload {
-        case .determined(let data):
-            data
-        case .undetermined(let data):
-            data
-        }
-        
-        // TODO: Payload here could be undetermined. Need to move this to trigger
-        let message = Message(
-            joinRef: decodedMessage.joinRef,
-            ref: decodedMessage.ref,
-            topic: decodedMessage.topic,
-            event: decodedMessage.event,
-            payload: data,
-            status: decodedMessage.status)
+//        
+//        let data = switch decodedMessage.payload {
+//        case .determined(let data):
+//            data
+//        case .undetermined(let data):
+//            data
+//        }
+//        
+//        // TODO: Payload here could be undetermined. Need to move this to trigger
+//        let message = Message(
+//            joinRef: decodedMessage.joinRef,
+//            ref: decodedMessage.ref,
+//            topic: decodedMessage.topic,
+//            event: decodedMessage.event,
+//            payload: data,
+//            status: decodedMessage.status)
         
         self.logItems("receive ", string)
-        DispatchQueue.main.async { self.onConnectionMessage(message) }
+        DispatchQueue.main.async { self.onConnectionMessage(decodedMessage) }
     }
 
     public func onClose(code: URLSessionWebSocketTask.CloseCode, reason: String? = nil) {

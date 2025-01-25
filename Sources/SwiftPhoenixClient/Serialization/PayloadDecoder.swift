@@ -18,6 +18,8 @@ public protocol PayloadDecoder {
     
     func decode(_ data: Data) throws -> [String: Any]
     
+    func decodeJsonObject(from data: Data) throws -> Any
+    
 }
 
 public class PhoenixPayloadDecoder: PayloadDecoder {
@@ -28,5 +30,9 @@ public class PhoenixPayloadDecoder: PayloadDecoder {
     
     public func decode(_ data: Data) throws -> [String : Any] {
         return try JSONSerialization.jsonObject(with: data) as! [String: Any]
+    }
+    
+    public func decodeJsonObject(from data: Data) throws -> Any {
+        return try JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
     }
 }
