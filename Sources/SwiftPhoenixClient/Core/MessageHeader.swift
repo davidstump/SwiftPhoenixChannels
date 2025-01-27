@@ -65,7 +65,7 @@ public struct DecodedMessage {
     let topic: String
     
     /// The string event name, for example "phx_join"
-    let event: String
+    var event: String
     
     /// The reply status as a string
     let status: String?

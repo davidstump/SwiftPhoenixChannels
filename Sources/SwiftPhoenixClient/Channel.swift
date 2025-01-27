@@ -230,6 +230,8 @@ public class Channel {
     
     let syncBindings: SynchronizedArray<BindingV2>
     
+    let subscriptions: SynchronizedArray<ChannelSubscription>
+    
     /// Tracks event binding ref counters
     var bindingRef: Int
     
@@ -267,6 +269,7 @@ public class Channel {
         self.socket = socket
         self.syncBindingsDel = SynchronizedArray()
         self.syncBindings = SynchronizedArray()
+        self.subscriptions = SynchronizedArray()
         self.bindingRef = 0
         self.timeout = socket.timeout
         self.joinedOnce = false
@@ -396,24 +399,35 @@ public class Channel {
         }
         
         // Perform when the join reply is received
-        self.onDecodedMessage(ChannelEvent.reply) { [weak self] message in
+        self.on(ChannelEvent.reply)._message { [weak self] message in
             guard let self else { return }
             
             // Trigger bindings
             guard let ref = message.ref else { return }
+            var replyEventMessage = message
+            replyEventMessage.event = self.replyEventName(ref)
             
-        
-            let message = DecodedMessage(
-                joinRef: message.joinRef,
-                ref: message.ref,
-                topic: self.topic,
-                event: self.replyEventName(ref),
-                status: message.status,
-                payload: message.payload
-            )
+            self.triggerV2(replyEventMessage)
             
-            self.triggerV2(message)
         }
+//        self.onDecodedMessage(ChannelEvent.reply) { [weak self] message in
+//            guard let self else { return }
+//            
+//            // Trigger bindings
+//            guard let ref = message.ref else { return }
+//            
+//        
+//            let message = DecodedMessage(
+//                joinRef: message.joinRef,
+//                ref: message.ref,
+//                topic: self.topic,
+//                event: self.replyEventName(ref),
+//                status: message.status,
+//                payload: message.payload
+//            )
+//            
+//            self.triggerV2(message)
+//        }
     }
     
     deinit {
@@ -555,6 +569,20 @@ public class Channel {
         return ref
     }
     
+    @discardableResult
+    public func on(_ event: String) -> ChannelSubscription {
+        let ref = bindingRef
+        self.bindingRef = ref + 1
+        
+        let subscription = ChannelSubscription(event: event, ref: ref)
+        self.subscriptions.append(subscription)
+        
+        return subscription
+    }
+    
+    // TODO: Off subscription, or all event subscriptions
+    
+    
     /// Unsubscribes from a channel event. If a `ref` is given, only the exact
     /// listener will be removed. Else all listeners for the `event` will be
     /// removed.
@@ -579,6 +607,8 @@ public class Channel {
             bind.event == event && (ref == nil || ref == bind.ref)
         }
     }
+    
+    
     
     /// Push a payload to the Channel
     ///
@@ -669,7 +699,7 @@ public class Channel {
         // Now set the state to leaving
         self.state = .leaving
         
-        let closeHandler: MessageHandler = { [weak self] message in
+        let closeHandler: (DecodedMessage) -> Void = { [weak self] message in
             guard let self else { return }
             
             self.socket?.logItems("channel", "leave \(self.topic)")
@@ -687,8 +717,8 @@ public class Channel {
         // Perform the same behavior if successfully left the channel
         // or if sending the event timed out
         leavePush
-            .receive("ok", callback: closeHandler)
-            .receive("timeout", callback: closeHandler)
+            .internalReceive("ok", callback: closeHandler)
+            .internalReceive("timeout", callback: closeHandler)
         leavePush.send()
         
         // If the Channel cannot send push events, trigger a success locally
@@ -764,6 +794,14 @@ public class Channel {
         let decoder = self.socket?.decoder ?? PhoenixPayloadDecoder()
         let encoder = self.socket?.encoder ?? PhoenixPayloadEncoder()
         let handledMessage = self.onInboundMessage(decodedMessage)
+        
+        self.subscriptions.forEach { subscription in
+            if subscription.event == decodedMessage.event {
+                subscription.trigger(decodedMessage)
+            }
+            
+        }
+        
         
         self.syncBindings.forEach { binding in
             do {

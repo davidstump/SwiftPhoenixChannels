@@ -21,72 +21,10 @@
 
 import Foundation
 
-protocol ReceiveHook {
-    func trigger(
-        message: DecodedMessage,
-        payloadDecoder: PayloadDecoder,
-        payloadEncoder: PayloadEncoder
-    ) throws
-}
-
-struct JsonObjectHook: ReceiveHook {
-    
-    // The status that the handler should be notified for
+struct ReceiveHook {
     let status: String
-    
-    // The callback notified if the status matches
-    let callback: MessageHandler
-    
-    func trigger(
-        message: DecodedMessage,
-        payloadDecoder: any PayloadDecoder,
-        payloadEncoder: any PayloadEncoder
-    ) throws {
-        // Only trigger the callback if the status matches the hook
-        guard message.status == status else { return }
-        
-        switch message.payload {
-        case .determined(let data):
-            let message = Message(
-                joinRef: message.joinRef,
-                ref: message.ref,
-                topic: message.topic,
-                event: message.event,
-                payload: data,
-                status: message.status
-            )
-            
-            callback(message)
-        case .undetermined(let incomingMessageData):
-            let array = try payloadDecoder.decodeJsonObject(from: incomingMessageData) as! [Any]
-            let payloadJsonObject = array[4]
-            
-            // Pushes will always be replies, however we override the event to `chan_reply_ref`
-            // so we can't check if event == phx_reply. So treat everything as a reply.
-            guard
-                let payload = payloadJsonObject as? [String: Any],
-                let response = payload["response"]
-            else {
-                let text = String(data: incomingMessageData, encoding: .utf8) ?? "unparsable"
-                throw PhxError.serializerError(reason: .invalidReplyStructure(string: text))
-            }
-            
-            let payloadData = try payloadEncoder.encode(any: response)
-            let message = Message(
-                joinRef: message.joinRef,
-                ref: message.ref,
-                topic: message.topic,
-                event: ChannelEvent.reply,
-                payload: payloadData,
-                status: message.status
-            )
-            
-            callback(message)
-            
-        }
-    }
+    let callback: SubscriptionCallback
 }
-
 
 /// Represnts pushing data to a `Channel` through the `Socket`
 public class Push {
@@ -113,7 +51,7 @@ public class Push {
     var timeoutWorkItem: DispatchWorkItem?
         
     /// Hooks into a Push. Where .receive("ok", callback(Payload)) are stored
-    var receiveHooks: [String: [ReceiveHook]]
+    var receiveHooks: SynchronizedArray<ReceiveHook>
     
     /// True if the Push has been sent
     var sent: Bool
@@ -135,8 +73,6 @@ public class Push {
         return self.channel?.socket?.encoder ?? PhoenixPayloadEncoder()
     }
     
-    
-    
     /// Initializes a Push
     ///
     /// - parameter channel: The Channel
@@ -155,7 +91,7 @@ public class Push {
         self.timeout = timeout
         self.receivedMessage = nil
         self.timeoutTimer = TimerQueue.main
-        self.receiveHooks = [:]
+        self.receiveHooks = SynchronizedArray()
         self.sent = false
         self.ref = nil
         self.asBinary = asBinary
@@ -203,39 +139,45 @@ public class Push {
     /// - parameter callback: Callback to fire when the status is recevied
     @discardableResult
     public func receive(_ status: String,
-                        callback: @escaping MessageHandler) -> Push {
-        let hook = JsonObjectHook(status: status, callback: callback)
+                        callback: @escaping (ChannelMessage<Data>) -> Void) -> Push {
+        let subscriptionCallback = DataSubscriptionCallback(callback: callback)
+        return _receive(status, callback: subscriptionCallback)
+    }
+    
+    @discardableResult
+    public func receiveJson(_ status: String,
+                            callback: @escaping (ChannelMessage<Any>) -> Void) -> Push {
+        let subscriptionCallback = JsonSubscriptionCallback(callback: callback)
+        return _receive(status, callback: subscriptionCallback)
+    }
+    
+    @discardableResult
+    public func receiveDecodable<T: Codable>(_ status: String,
+                                             of type: T.Type,
+                                             callback: @escaping (ChannelMessage<T>) -> Void) -> Push {
+        let subscriptionCallback = DecodableSubscriptionCallback(type: type, callback: callback)
+        return _receive(status, callback: subscriptionCallback)
+    }
+    
+    @discardableResult
+    func internalReceive(_ status: String,
+                         callback: @escaping (DecodedMessage) -> Void) -> Push {
+        let subscriptionCallback = InternalSubscriptionCallback(callback: callback)
+        return _receive(status, callback: subscriptionCallback)
+    }
+    
+    func _receive(_ status: String, callback: SubscriptionCallback) -> Self {
+        let hook = ReceiveHook(status: status, callback: callback)
         
         // If the message has already been received, pass it to the callback immediately
         if hasReceived(status: status), let receivedMessage = self.receivedMessage {
-            try! hook.trigger(message: receivedMessage,
-                              payloadDecoder: self.decoder,
-                              payloadEncoder: self.encoder)
+            hook.callback.trigger(receivedMessage)
         }
         
-        if receiveHooks[status] == nil {
-            /// Create a new array of hooks if no previous hook is associated with status
-            receiveHooks[status] = [hook]
-        } else {
-            /// A previous hook for this status already exists. Just append the new hook
-            receiveHooks[status]?.append(hook)
-        }
+        self.receiveHooks.append(hook)
         
         return self
     }
-    // TODO: Push, receive types
-    // TODO: Push, receive any status
-//
-//    public func receive<T: Codable>(
-//        _ status: String,
-//        type: T.Type,
-//        callback: @escaping (TypedMessage<T>) -> Void
-//    ) -> Int {
-//        
-//        if hasReceived(status: status)
-//        
-//    }
-//    
     
     /// Resets the Push as it was after it was first tnitialized.
     internal func reset() {
@@ -252,10 +194,10 @@ public class Push {
     /// - parameter status: Status which was received, e.g. "ok", "error", "timeout"
     /// - parameter response: Response that was received
     private func matchReceive(_ status: String, message: DecodedMessage) {
-        receiveHooks[status]?.forEach { hook in
-            try! hook.trigger(message: message,
-                         payloadDecoder: self.decoder,
-                         payloadEncoder: self.encoder)
+        self.receiveHooks.forEach { hook in
+            if hook.status == status {
+                hook.callback.trigger(message)
+            }
         }
     }
     
@@ -291,7 +233,7 @@ public class Push {
         
         /// If a response is received  before the Timer triggers, cancel timer
         /// and match the recevied event to it's corresponding hook
-        channel.onDecodedMessage(refEvent) { [weak self] decodedMessage in
+        channel.on(refEvent)._message { [weak self] decodedMessage in
             guard let self else { return }
             
             self.cancelRefEvent()
