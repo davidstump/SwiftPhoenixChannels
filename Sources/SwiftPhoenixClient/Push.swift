@@ -223,8 +223,9 @@ public class Push {
         
         return self
     }
-    
-//    
+    // TODO: Push, receive types
+    // TODO: Push, receive any status
+//
 //    public func receive<T: Codable>(
 //        _ status: String,
 //        type: T.Type,

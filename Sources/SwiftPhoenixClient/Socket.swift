@@ -480,12 +480,13 @@ public class Socket: PhoenixTransportDelegate {
         let callback: (() throws -> ()) = { [weak self] in
             guard let self else { return }
             
-            let message = Message.message(
+            let message = Message(
                 joinRef: joinRef,
                 ref: ref,
                 topic: topic,
                 event: event,
-                payload: payload
+                payload: payload,
+                status: nil
             )
 
             if asBinary {

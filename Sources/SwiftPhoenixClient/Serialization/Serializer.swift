@@ -121,9 +121,7 @@ public class PhoenixSerializer: Serializer {
         }
         
         let header = try payloadDecoder.decode(MessageHeader.self, from: jsonData)
-        
-//        let inboundMesage = try payloadDecoder.decode(InboundMessage.self, from: jsonData)
-        
+
         let joinRef = header.joinRef
         let ref = header.ref
         let topic = header.topic
