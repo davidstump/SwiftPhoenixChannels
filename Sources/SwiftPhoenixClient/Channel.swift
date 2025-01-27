@@ -36,153 +36,6 @@ struct Binding {
     let callback: MessageHandler
 }
 
-
-protocol BindingV2 {
-    func trigger(
-        message: DecodedMessage,
-        payloadDecoder: PayloadDecoder,
-        payloadEncoder: PayloadEncoder
-    ) throws
-}
-
-struct DecodedMessageBinding: BindingV2 {
-    
-    /// The event that the Binding is bound to
-    let event: String
-    
-    /// The reference number of the Binding
-    let ref: Int
-    
-    /// The callback to be triggered
-    let callback: (DecodedMessage) -> Void
-    
-    func trigger(message: DecodedMessage,
-                 payloadDecoder: any PayloadDecoder,
-                 payloadEncoder: any PayloadEncoder) throws {
-        guard event == message.event else { return }
-        self.callback(message)
-    }
-    
-}
-
-struct RefBinding: BindingV2 {
-    
-    /// The event that the Binding is bound to
-    let event: String
-    
-    /// The reference number of the Binding
-    let ref: Int
-    
-    /// The callback to be triggered
-    let callback: MessageHandler
-    
-    func trigger(
-        message: DecodedMessage,
-        payloadDecoder: any PayloadDecoder,
-        payloadEncoder: any PayloadEncoder
-    ) throws {
-        // Only trigger if the binding event matches the message event
-        guard message.event == event else { return }
-        
-        // Decode the payload at the last possible moment
-        switch message.payload {
-        case .determined(let data):
-            let message = Message(
-                joinRef: message.joinRef,
-                ref: message.ref,
-                topic: message.topic,
-                event: message.event,
-                payload: data,
-                status: message.status
-            )
-            
-            callback(message)
-            
-        case .undetermined(let incomingMessageData):
-            // incomingMessageData here is the entire received message raw text,
-            // represented as data. Use JsonSerialization to parse out the data
-            // as an Any JsonObject, pluck out the `payload`, and then construct
-            // and return a Message to the callback.
-            let array = try payloadDecoder.decodeJsonObject(from: incomingMessageData) as! [Any]
-            let payloadJsonObject = array[4]
-            
-            if message.event == ChannelEvent.reply {
-                guard
-                    let payload = payloadJsonObject as? [String: Any],
-                    let response = payload["response"]
-                else {
-                    let text = String(data: incomingMessageData, encoding: .utf8) ?? "unparsable"
-                    throw PhxError.serializerError(reason: .invalidReplyStructure(string: text))
-                }
-                
-                let payloadData = try payloadEncoder.encode(any: response)
-                let message = Message(
-                    joinRef: message.joinRef,
-                    ref: message.ref,
-                    topic: message.topic,
-                    event: ChannelEvent.reply,
-                    payload: payloadData,
-                    status: message.status
-                )
-                
-                callback(message)
-            } else {
-                let payloadData = try payloadEncoder.encode(any: payloadJsonObject)
-                
-                let message = Message(
-                    joinRef: message.joinRef,
-                    ref: message.ref,
-                    topic: message.topic,
-                    event: message.event,
-                    payload: payloadData,
-                    status: nil
-                )
-                callback(message)
-            }
-        }
-    }
-}
-
-
-struct TypedBinding<T: Codable>: BindingV2 {
-
-    /// The event that the Binding is bound to
-    let event: String
-    
-    /// The reference number of the Binding
-    let ref: Int
-    
-    /// The Type to decode to
-    let type: T.Type
-    
-    /// The callback to be triggered
-    let callback: (TypedMessage<T>) -> Void
-    
-    func trigger(
-        message: DecodedMessage,
-        payloadDecoder: any PayloadDecoder,
-        payloadEncoder: any PayloadEncoder
-    ) throws {
-        // Only trigger if the binding event matches the message event
-        guard message.event == event else { return }
-        
-        switch message.payload {
-        case .determined(let payloadData):
-            let payload = try payloadDecoder.decode(type, from: payloadData)
-            let typedMessage = TypedMessage(message: message, payload: payload)
-            callback(typedMessage)
-            
-        case .undetermined(let incomingMessageData):
-            let typedMessage = try payloadDecoder.decode(TypedMessage<T>.self,
-                                                         from: incomingMessageData)
-            callback(typedMessage)
-        }
-    }
-}
-
-
-
-
 ///
 /// Represents a Channel which is bound to a topic
 ///
@@ -228,8 +81,6 @@ public class Channel {
     /// Collection of event bindings
     let syncBindingsDel: SynchronizedArray<Binding>
     
-    let syncBindings: SynchronizedArray<BindingV2>
-    
     let subscriptions: SynchronizedArray<ChannelSubscription>
     
     /// Tracks event binding ref counters
@@ -268,7 +119,6 @@ public class Channel {
         self.params = params
         self.socket = socket
         self.syncBindingsDel = SynchronizedArray()
-        self.syncBindings = SynchronizedArray()
         self.subscriptions = SynchronizedArray()
         self.bindingRef = 0
         self.timeout = socket.timeout
@@ -410,24 +260,6 @@ public class Channel {
             self.triggerV2(replyEventMessage)
             
         }
-//        self.onDecodedMessage(ChannelEvent.reply) { [weak self] message in
-//            guard let self else { return }
-//            
-//            // Trigger bindings
-//            guard let ref = message.ref else { return }
-//            
-//        
-//            let message = DecodedMessage(
-//                joinRef: message.joinRef,
-//                ref: message.ref,
-//                topic: self.topic,
-//                event: self.replyEventName(ref),
-//                status: message.status,
-//                payload: message.payload
-//            )
-//            
-//            self.triggerV2(message)
-//        }
     }
     
     deinit {
@@ -477,8 +309,8 @@ public class Channel {
     /// - parameter callback: Called when the Channel closes
     /// - return: Ref counter of the subscription. See `func off()`
     @discardableResult
-    public func onClose(_ callback: @escaping MessageHandler) -> Int {
-        return self.on(ChannelEvent.close, callback: callback)
+    public func onClose(_ callback: @escaping (ChannelMessage<Data>) -> Void) -> ChannelSubscription {
+        return self.on(ChannelEvent.close).message(callback)
     }
     
     /// Hook into when the Channel receives an Error.
@@ -493,8 +325,8 @@ public class Channel {
     /// - parameter callback: Called when the Channel closes
     /// - return: Ref counter of the subscription. See `func off()`
     @discardableResult
-    public func onError(_ callback: @escaping MessageHandler) -> Int {
-        return self.on(ChannelEvent.error, callback: callback)
+    public func onError(_ callback: @escaping (ChannelMessage<Data>) -> Void) -> ChannelSubscription {
+        return self.on(ChannelEvent.error).message(callback)
     }
     
     /// Subscribes on channel events.
@@ -520,56 +352,6 @@ public class Channel {
     /// - parameter callback: Called with the event's message
     /// - return: Ref counter of the subscription. See `func off()`
     @discardableResult
-    public func on(_ event: String, callback: @escaping MessageHandler) -> Int {
-        let ref = bindingRef
-        self.bindingRef = ref + 1
-        
-        let binding = RefBinding(event: event, ref: ref, callback: callback)
-        self.syncBindings.append(binding)
-//        self.syncBindingsDel.append(Binding(event: event, ref: ref, callback: callback))
-        
-        return ref
-    }
-    
-    @discardableResult
-    public func on<T: Codable>(
-        _ event: String,
-        type: T.Type,
-        callback: @escaping (TypedMessage<T>) -> Void
-    ) -> Int {
-        let ref = bindingRef
-        self.bindingRef = ref + 1
-        
-        let binding = TypedBinding(
-            event: event,
-            ref: ref,
-            type: type,
-            callback: callback
-        )
-        
-        self.syncBindings.append(binding)
-        return ref
-    }
-    
-    @discardableResult
-    internal func onDecodedMessage(
-        _ event: String,
-        callback: @escaping (DecodedMessage) -> Void
-    ) -> Int {
-        let ref = bindingRef
-        self.bindingRef = ref + 1
-        
-        let binding = DecodedMessageBinding(
-            event: event,
-            ref: ref,
-            callback: callback
-        )
-        
-        self.syncBindings.append(binding)
-        return ref
-    }
-    
-    @discardableResult
     public func on(_ event: String) -> ChannelSubscription {
         let ref = bindingRef
         self.bindingRef = ref + 1
@@ -580,8 +362,10 @@ public class Channel {
         return subscription
     }
     
-    // TODO: Off subscription, or all event subscriptions
     
+    public func off(_ subscription: ChannelSubscription) {
+        self.off(subscription.event, ref: subscription.ref)
+    }
     
     /// Unsubscribes from a channel event. If a `ref` is given, only the exact
     /// listener will be removed. Else all listeners for the `event` will be
@@ -605,6 +389,10 @@ public class Channel {
     public func off(_ event: String, ref: Int? = nil) {
         self.syncBindingsDel.removeAll { (bind) -> Bool in
             bind.event == event && (ref == nil || ref == bind.ref)
+        }
+        
+        self.subscriptions.removeAll { (subcription) -> Bool in
+            subcription.event == event && (ref == nil || ref == subcription.ref)
         }
     }
     
@@ -797,24 +585,9 @@ public class Channel {
         
         self.subscriptions.forEach { subscription in
             if subscription.event == decodedMessage.event {
-                subscription.trigger(decodedMessage)
+                subscription.trigger(handledMessage)
             }
             
-        }
-        
-        
-        self.syncBindings.forEach { binding in
-            do {
-                try binding.trigger(
-                    message: handledMessage,
-                    payloadDecoder: decoder,
-                    payloadEncoder: encoder
-                )
-            } catch {
-                print("TODO: Couldn't trigger message", error)
-                print("--- ", error)
-                print("--- ", decodedMessage)
-            }
         }
     }
     
