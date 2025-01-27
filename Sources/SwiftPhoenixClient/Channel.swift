@@ -21,21 +21,6 @@
 import Swift
 import Foundation
 
-public typealias MessageHandler = (Message) -> Void
-
-/// Container class of bindings to the channel
-struct Binding {
-    
-    /// The event that the Binding is bound to
-    let event: String
-    
-    /// The reference number of the Binding
-    let ref: Int
-    
-    /// The callback to be triggered
-    let callback: MessageHandler
-}
-
 ///
 /// Represents a Channel which is bound to a topic
 ///
@@ -78,9 +63,7 @@ public class Channel {
     /// Current state of the Channel
     var state: ChannelState
     
-    /// Collection of event bindings
-    let syncBindingsDel: SynchronizedArray<Binding>
-    
+    /// Collection of subscriptions on the Channel
     let subscriptions: SynchronizedArray<ChannelSubscription>
     
     /// Tracks event binding ref counters
@@ -118,7 +101,6 @@ public class Channel {
         self.topic = topic
         self.params = params
         self.socket = socket
-        self.syncBindingsDel = SynchronizedArray()
         self.subscriptions = SynchronizedArray()
         self.bindingRef = 0
         self.timeout = socket.timeout
@@ -257,7 +239,7 @@ public class Channel {
             var replyEventMessage = message
             replyEventMessage.event = self.replyEventName(ref)
             
-            self.triggerV2(replyEventMessage)
+            self.trigger(replyEventMessage)
             
         }
     }
@@ -271,11 +253,9 @@ public class Channel {
     ///
     /// - parameter msg: The Message received by the client from the server
     /// - return: Must return the message, modified or unmodified
-    public var onMessage: (_ message: Message) -> Message = { (message) in
+    public var onMessage: (_ message: ReceivedMessage) -> ReceivedMessage = { message in
         return message
     }
-    
-    public var onInboundMessage: (_ message: DecodedMessage) -> DecodedMessage = { $0 }
     
     /// Joins the channel
     ///
@@ -387,10 +367,6 @@ public class Channel {
     /// - parameter event: Event to unsubscribe from
     /// - paramter ref: Ref counter returned when subscribing. Can be omitted
     public func off(_ event: String, ref: Int? = nil) {
-        self.syncBindingsDel.removeAll { (bind) -> Bool in
-            bind.event == event && (ref == nil || ref == bind.ref)
-        }
-        
         self.subscriptions.removeAll { (subcription) -> Bool in
             subcription.event == event && (ref == nil || ref == subcription.ref)
         }
@@ -487,7 +463,7 @@ public class Channel {
         // Now set the state to leaving
         self.state = .leaving
         
-        let closeHandler: (DecodedMessage) -> Void = { [weak self] message in
+        let closeHandler: (ReceivedMessage) -> Void = { [weak self] message in
             guard let self else { return }
             
             self.socket?.logItems("channel", "leave \(self.topic)")
@@ -523,7 +499,7 @@ public class Channel {
     /// - parameter payload: The payload for the message
     /// - parameter ref: The reference of the message
     /// - return: Must return the payload, modified or unmodified
-    public func onMessage(callback: @escaping (Message) -> Message) {
+    public func onMessage(callback: @escaping (ReceivedMessage) -> ReceivedMessage) {
         self.onMessage = callback
     }
     
@@ -532,7 +508,7 @@ public class Channel {
     // MARK: - Internal
     //----------------------------------------------------------------------
     /// Checks if an event received by the Socket belongs to this Channel
-    func isMember(_ message: DecodedMessage) -> Bool {
+    func isMember(_ message: ReceivedMessage) -> Bool {
         // Return false if the message's topic does not match the Channel's topic
         guard message.topic == self.topic else { return false }
         
@@ -568,23 +544,13 @@ public class Channel {
     /// `channel.on("event")`.
     ///
     /// - parameter message: Message to pass to the event bindings
-    func trigger(_ message: Message) {
-        let handledMessage = self.onMessage(message)
-        
-        self.syncBindingsDel.forEach { binding in
-            if binding.event == message.event {
-                binding.callback(handledMessage)
-            }
-        }
-    }
-    
-    func triggerV2(_ decodedMessage: DecodedMessage) {
+    func trigger(_ receivedMessage: ReceivedMessage) {
         let decoder = self.socket?.decoder ?? PhoenixPayloadDecoder()
         let encoder = self.socket?.encoder ?? PhoenixPayloadEncoder()
-        let handledMessage = self.onInboundMessage(decodedMessage)
+        let handledMessage = self.onMessage(receivedMessage)
         
         self.subscriptions.forEach { subscription in
-            if subscription.event == decodedMessage.event {
+            if subscription.event == receivedMessage.event {
                 subscription.trigger(handledMessage)
             }
             
@@ -622,13 +588,15 @@ public class Channel {
                  ref: String?,
                  joinRef: String? = nil,
                  status: String? = nil) {
-        let message = Message(
+        let message = ReceivedMessage(
             joinRef: joinRef ?? self.joinRef,
             ref: ref,
             topic: self.topic,
             event: event,
-            payload: payload,
-            status: status
+            status: status,
+            payload: .decided(payload),
+            rawText: String(data: payload, encoding: .utf8),
+            rawBinary: nil
         )
         
         self.trigger(message)

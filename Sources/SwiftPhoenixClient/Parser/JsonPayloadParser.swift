@@ -14,16 +14,16 @@ class JsonPayloadParser: PayloadParser {
     let payloadDecoder = PhoenixPayloadDecoder()
     let payloadEncoder = PhoenixPayloadEncoder()
     
-    func parse(_ decodedMessage: DecodedMessage) -> Result<Any, any Error> {
+    func parse(_ receivedMessage: ReceivedMessage) -> Result<Any, any Error> {
         Result {
-            switch decodedMessage.payload {
-            case .determined(let payloadData):
+            switch receivedMessage.payload {
+            case .decided(let payloadData):
                 return try payloadDecoder.decodeJsonObject(from: payloadData)
-            case .undetermined(let incomingMessageData):
+            case .deferred(let incomingMessageData):
                 let array = try payloadDecoder.decodeJsonObject(from: incomingMessageData) as! [Any]
                 let payloadJsonObject = array[4]
                 
-                if decodedMessage.event == ChannelEvent.reply {
+                if receivedMessage.event == ChannelEvent.reply {
                     guard
                         let payload = payloadJsonObject as? [String: Any],
                         let response = payload["response"]

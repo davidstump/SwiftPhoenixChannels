@@ -31,7 +31,7 @@ struct StateChangeCallbacks {
     let open: SynchronizedArray<(ref: String, callback: ((URLResponse?) -> Void))> = .init()
     let close: SynchronizedArray<(ref: String, callback: ((URLSessionWebSocketTask.CloseCode, String?) -> Void))> = .init()
     let error: SynchronizedArray<(ref: String, callback: ((Error, URLResponse?) -> Void))> = .init()
-    let message: SynchronizedArray<(ref: String, callback: ((Message) -> Void))> = .init()
+    let message: SynchronizedArray<(ref: String, callback: ((ReceivedMessage) -> Void))> = .init()
 }
 
 
@@ -389,7 +389,7 @@ public class Socket: PhoenixTransportDelegate {
     ///
     /// - parameter callback: Called when the Socket receives a message event
     @discardableResult
-    public func onMessage(callback: @escaping MessageHandler) -> String {
+    public func onMessage(callback: @escaping (ReceivedMessage) -> Void) -> String {
         self.append(callback: callback, to: self.stateChangeCallbacks.message)
     }
     
@@ -576,18 +576,17 @@ public class Socket: PhoenixTransportDelegate {
         self.stateChangeCallbacks.error.forEach({ $0.callback(error, response) })
     }
     
-    internal func onConnectionMessage(_ message: DecodedMessage) {
+    internal func onConnectionMessage(_ message: ReceivedMessage) {
         // Clear heartbeat ref, preventing a heartbeat timeout disconnect
         if message.ref == pendingHeartbeatRef { pendingHeartbeatRef = nil }
         
         // Dispatch the message to all channels that belong to the topic
         self.channels
             .filter( { $0.isMember(message) } )
-            .forEach( { $0.triggerV2(message) } )
+            .forEach( { $0.trigger(message) } )
         
         // Inform all onMessage callbacks of the message
-        // TODO: DecodedMessage
-//        self.stateChangeCallbacks.message.forEach({ $0.callback(message) })
+        self.stateChangeCallbacks.message.forEach({ $0.callback(message) })
     }
     
     /// Triggers an error event to all of the connected Channels

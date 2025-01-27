@@ -11,15 +11,15 @@ import Foundation
 
 protocol SubscriptionCallback {
     
-    func trigger(_ decodedMessage: DecodedMessage)
+    func trigger(_ decodedMessage: ReceivedMessage)
     
 }
 
 struct InternalSubscriptionCallback: SubscriptionCallback {
-    let callback: (DecodedMessage) -> Void
+    let callback: (ReceivedMessage) -> Void
     
-    func trigger(_ decodedMessage: DecodedMessage) {
-        callback(decodedMessage)
+    func trigger(_ receivedMessage: ReceivedMessage) {
+        callback(receivedMessage)
     }
 }
 
@@ -29,9 +29,9 @@ struct DataSubscriptionCallback: SubscriptionCallback {
     let parser = DataPayloadParser()
     let callback: (ChannelMessage<Data>) -> Void
     
-    func trigger(_ decodedMessage: DecodedMessage) {
-        let result = self.parser.parse(decodedMessage)
-        let channelMessage = ChannelMessage(from: decodedMessage, payload: result)
+    func trigger(_ receivedMessage: ReceivedMessage) {
+        let result = self.parser.parse(receivedMessage)
+        let channelMessage = ChannelMessage(from: receivedMessage, payload: result)
         callback(channelMessage)
     }
 }
@@ -41,9 +41,9 @@ struct JsonSubscriptionCallback: SubscriptionCallback {
     let parser = JsonPayloadParser()
     let callback: (ChannelMessage<Any>) -> Void
     
-    func trigger(_ decodedMessage: DecodedMessage) {
-        let result = self.parser.parse(decodedMessage)
-        let channelMessage = ChannelMessage(from: decodedMessage, payload: result)
+    func trigger(_ receivedMessage: ReceivedMessage) {
+        let result = self.parser.parse(receivedMessage)
+        let channelMessage = ChannelMessage(from: receivedMessage, payload: result)
         callback(channelMessage)
     }
 }
@@ -61,9 +61,9 @@ struct DecodableSubscriptionCallback<T: Codable>: SubscriptionCallback {
         }
     
     
-    func trigger(_ decodedMessage: DecodedMessage) {
-        let result = self.parser.parse(decodedMessage)
-        let channelMessage = ChannelMessage(from: decodedMessage, payload: result)
+    func trigger(_ receivedMessage: ReceivedMessage) {
+        let result = self.parser.parse(receivedMessage)
+        let channelMessage = ChannelMessage(from: receivedMessage, payload: result)
         callback(channelMessage)
     }
 }
@@ -93,7 +93,7 @@ public struct ChannelMessage<PayloadType> {
     /// `Result` so that serialization errors can be passed up to the caller.
     public let payload: Result<PayloadType, Swift.Error>
     
-    init(from message: DecodedMessage, payload: Result<PayloadType, Swift.Error>) {
+    init(from message: ReceivedMessage, payload: Result<PayloadType, Swift.Error>) {
         self.joinRef = message.joinRef
         self.ref = message.ref
         self.topic = message.topic
@@ -146,15 +146,15 @@ public class ChannelSubscription {
     }
     
     @discardableResult
-    func _message(_ callback: @escaping (DecodedMessage) -> Void) -> Self {
+    func _message(_ callback: @escaping (ReceivedMessage) -> Void) -> Self {
         let callback = InternalSubscriptionCallback(callback: callback)
         self.callbacks.append(callback)
         
         return self
     }
     
-    func trigger(_ decodedMessage: DecodedMessage) {
-        self.callbacks.forEach { $0.trigger(decodedMessage) }
+    func trigger(_ receivedMessage: ReceivedMessage) {
+        self.callbacks.forEach { $0.trigger(receivedMessage) }
     }
 }
 
