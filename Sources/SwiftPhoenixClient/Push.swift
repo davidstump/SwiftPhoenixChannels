@@ -45,8 +45,45 @@ struct JsonObjectHook: ReceiveHook {
         // Only trigger the callback if the status matches the hook
         guard message.status == status else { return }
         
-        
-        
+        switch message.payload {
+        case .determined(let data):
+            let message = Message(
+                joinRef: message.joinRef,
+                ref: message.ref,
+                topic: message.topic,
+                event: message.event,
+                payload: data,
+                status: message.status
+            )
+            
+            callback(message)
+        case .undetermined(let incomingMessageData):
+            let array = try payloadDecoder.decodeJsonObject(from: incomingMessageData) as! [Any]
+            let payloadJsonObject = array[4]
+            
+            // Pushes will always be replies, however we override the event to `chan_reply_ref`
+            // so we can't check if event == phx_reply. So treat everything as a reply.
+            guard
+                let payload = payloadJsonObject as? [String: Any],
+                let response = payload["response"]
+            else {
+                let text = String(data: incomingMessageData, encoding: .utf8) ?? "unparsable"
+                throw PhxError.serializerError(reason: .invalidReplyStructure(string: text))
+            }
+            
+            let payloadData = try payloadEncoder.encode(any: response)
+            let message = Message(
+                joinRef: message.joinRef,
+                ref: message.ref,
+                topic: message.topic,
+                event: ChannelEvent.reply,
+                payload: payloadData,
+                status: message.status
+            )
+            
+            callback(message)
+            
+        }
     }
 }
 

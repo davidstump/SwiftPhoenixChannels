@@ -396,22 +396,23 @@ public class Channel {
         }
         
         // Perform when the join reply is received
-        self.on(ChannelEvent.reply) { [weak self] message in
+        self.onDecodedMessage(ChannelEvent.reply) { [weak self] message in
             guard let self else { return }
             
             // Trigger bindings
             guard let ref = message.ref else { return }
             
-            let message = Message(
+        
+            let message = DecodedMessage(
                 joinRef: message.joinRef,
                 ref: message.ref,
                 topic: self.topic,
                 event: self.replyEventName(ref),
-                payload: message.payload,
-                status: message.status
+                status: message.status,
+                payload: message.payload
             )
             
-            self.trigger(message)
+            self.triggerV2(message)
         }
     }
     
