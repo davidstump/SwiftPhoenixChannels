@@ -45,6 +45,7 @@ public protocol Serializer {
 }
 
 
+
 ///
 /// The default implementation of [Serializer] for encoding and decoding messages. Matches the JS
 /// client behavior. You can build your own if you'd like by implementing `Serializer` and passing
@@ -67,6 +68,21 @@ public class PhoenixSerializer: Serializer {
         self.payloadEncoder = payloadEncoder
         self.payloadDecoder = payloadDecoder
     }
+    
+    public func encode(message: OutgoingMessage) throws -> String {
+        switch message.payload {
+        case .binary(let data):
+            // TODO: Binary Encode
+            return ""
+        case .codable(let codable):
+            return ""
+            
+            
+        case .json(let any):
+            return ""
+        }
+    }
+    
     
     public func encode(message: Message) throws -> String {
         let json = try payloadDecoder.decode(JsonElement.self, from: message.payload)

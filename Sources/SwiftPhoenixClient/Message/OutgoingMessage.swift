@@ -34,5 +34,12 @@ public struct OutgoingMessage {
     public let event: String
     
     /// The payload of the message to send or that was received.`
-    public let payload: Data
+    public let payload: OutgoingPayload
 }
+
+public enum OutgoingPayload {
+    case binary(Data)
+    case codable(Codable)
+    case json(Any)
+}
+
