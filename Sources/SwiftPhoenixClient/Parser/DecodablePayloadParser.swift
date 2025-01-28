@@ -15,9 +15,9 @@ struct DecodablePayloadParser<T: Codable>: PayloadParser {
     /// The Type to decode to
     let type: T.Type
     
-    func parse(_ receivedMessage: ReceivedMessage) -> Result<T, any Error> {
+    func parse(_ incomingMessage: IncomingMessage) -> Result<T, any Error> {
         Result {
-            switch receivedMessage.payload {
+            switch incomingMessage.payload {
             case .decided(let payloadData):
                 return try payloadDecoder.decode(type, from: payloadData)
                 

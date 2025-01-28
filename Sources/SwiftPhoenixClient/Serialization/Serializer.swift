@@ -32,7 +32,7 @@ public protocol Serializer {
     /// - parameter text: The raw `String` from a Phoenix server
     /// - returns: The `SocketMessage` created from the raw `String`
     /// - throws: `preconditionFailure` if the text could not be converted to a `SocketMessage`
-    func decode(text: String) throws -> ReceivedMessage
+    func decode(text: String) throws -> IncomingMessage
     
 
     /// Decodes binary  `Data` from a Phoenix server into a `SocketMessage` structure
@@ -40,7 +40,7 @@ public protocol Serializer {
     /// - parameter data: The binary `Data` from a Phoenix server
     /// - returns The `SocketMessage` created from the raw `Data`
     /// - throws `preconditionFailure` if the data could not be converted to a `SocketMessage`
-    func binaryDecode(data: Data) throws -> ReceivedMessage
+    func binaryDecode(data: Data) throws -> IncomingMessage
     
 }
 
@@ -138,7 +138,7 @@ public class PhoenixSerializer: Serializer {
     }
     
     
-    public func decode(text: String) throws -> ReceivedMessage {
+    public func decode(text: String) throws -> IncomingMessage {
         guard
             let jsonData = text.data(using: .utf8)
         else {
@@ -162,7 +162,7 @@ public class PhoenixSerializer: Serializer {
                 throw PhxError.serializerError(reason: .invalidReplyStructure(string: text))
             }
             
-            return ReceivedMessage(
+            return IncomingMessage(
                 joinRef: joinRef,
                 ref: ref,
                 topic: topic,
@@ -173,7 +173,7 @@ public class PhoenixSerializer: Serializer {
                 rawBinary: nil
             )
         } else if joinRef != nil || ref != nil {
-            return ReceivedMessage(
+            return IncomingMessage(
                 joinRef: joinRef,
                 ref: ref,
                 topic: topic,
@@ -184,7 +184,7 @@ public class PhoenixSerializer: Serializer {
                 rawBinary: nil
             )
         } else {
-            return ReceivedMessage(
+            return IncomingMessage(
                 joinRef: nil,
                 ref: nil,
                 topic: topic,
@@ -198,7 +198,7 @@ public class PhoenixSerializer: Serializer {
     }
     
     
-    public func binaryDecode(data: Data) throws -> ReceivedMessage {
+    public func binaryDecode(data: Data) throws -> IncomingMessage {
         let binary = [UInt8](data)
         return switch binary[0] {
         case KIND_PUSH: try decodePush(buffer: binary, rawData: data)
@@ -212,7 +212,7 @@ public class PhoenixSerializer: Serializer {
     }
     
     // MARK: - Private -
-    private func decodePush(buffer: [UInt8], rawData: Data) throws -> ReceivedMessage {
+    private func decodePush(buffer: [UInt8], rawData: Data) throws -> IncomingMessage {
         let joinRefSize = Int(buffer[1])
         let topicSize = Int(buffer[2])
         let eventSize = Int(buffer[3])
@@ -230,7 +230,7 @@ public class PhoenixSerializer: Serializer {
         offset += eventSize
         let data = Data(buffer[offset ..< buffer.count])
         
-        return ReceivedMessage(
+        return IncomingMessage(
             joinRef: joinRef,
             ref: nil,
             topic: topic,
@@ -242,7 +242,7 @@ public class PhoenixSerializer: Serializer {
         )
     }
     
-    private func decodeReply(buffer: [UInt8], rawData: Data) throws -> ReceivedMessage {
+    private func decodeReply(buffer: [UInt8], rawData: Data) throws -> IncomingMessage {
         let joinRefSize = Int(buffer[1])
         let refSize = Int(buffer[2])
         let topicSize = Int(buffer[3])
@@ -264,7 +264,7 @@ public class PhoenixSerializer: Serializer {
         let data = Data(buffer[offset ..< buffer.count])
         
         // for binary messages, payload = {status: event, response: data}
-        return ReceivedMessage(
+        return IncomingMessage(
             joinRef: joinRef,
             ref: ref,
             topic: topic,
@@ -276,7 +276,7 @@ public class PhoenixSerializer: Serializer {
         )
     }
     
-    private func decodeBroadcast(buffer: [UInt8], rawData: Data) throws -> ReceivedMessage {
+    private func decodeBroadcast(buffer: [UInt8], rawData: Data) throws -> IncomingMessage {
         let topicSize = Int(buffer[1])
         let eventSize = Int(buffer[2])
         var offset = HEADER_LENGTH + 2
@@ -291,7 +291,7 @@ public class PhoenixSerializer: Serializer {
         offset += eventSize
         let data = Data(buffer[offset ..< buffer.count])
         
-        return ReceivedMessage(
+        return IncomingMessage(
             joinRef: nil,
             ref: nil,
             topic: topic,

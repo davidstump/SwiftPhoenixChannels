@@ -253,7 +253,7 @@ public class Channel {
     ///
     /// - parameter msg: The Message received by the client from the server
     /// - return: Must return the message, modified or unmodified
-    public var onMessage: (_ message: ReceivedMessage) -> ReceivedMessage = { message in
+    public var onMessage: (_ message: IncomingMessage) -> IncomingMessage = { message in
         return message
     }
     
@@ -463,7 +463,7 @@ public class Channel {
         // Now set the state to leaving
         self.state = .leaving
         
-        let closeHandler: (ReceivedMessage) -> Void = { [weak self] message in
+        let closeHandler: (IncomingMessage) -> Void = { [weak self] message in
             guard let self else { return }
             
             self.socket?.logItems("channel", "leave \(self.topic)")
@@ -499,7 +499,7 @@ public class Channel {
     /// - parameter payload: The payload for the message
     /// - parameter ref: The reference of the message
     /// - return: Must return the payload, modified or unmodified
-    public func onMessage(callback: @escaping (ReceivedMessage) -> ReceivedMessage) {
+    public func onMessage(callback: @escaping (IncomingMessage) -> IncomingMessage) {
         self.onMessage = callback
     }
     
@@ -508,7 +508,7 @@ public class Channel {
     // MARK: - Internal
     //----------------------------------------------------------------------
     /// Checks if an event received by the Socket belongs to this Channel
-    func isMember(_ message: ReceivedMessage) -> Bool {
+    func isMember(_ message: IncomingMessage) -> Bool {
         // Return false if the message's topic does not match the Channel's topic
         guard message.topic == self.topic else { return false }
         
@@ -544,13 +544,13 @@ public class Channel {
     /// `channel.on("event")`.
     ///
     /// - parameter message: Message to pass to the event bindings
-    func trigger(_ receivedMessage: ReceivedMessage) {
+    func trigger(_ incomingMessage: IncomingMessage) {
         let decoder = self.socket?.decoder ?? PhoenixPayloadDecoder()
         let encoder = self.socket?.encoder ?? PhoenixPayloadEncoder()
-        let handledMessage = self.onMessage(receivedMessage)
+        let handledMessage = self.onMessage(incomingMessage)
         
         self.subscriptions.forEach { subscription in
-            if subscription.event == receivedMessage.event {
+            if subscription.event == incomingMessage.event {
                 subscription.trigger(handledMessage)
             }
             
@@ -588,7 +588,7 @@ public class Channel {
                  ref: String?,
                  joinRef: String? = nil,
                  status: String? = nil) {
-        let message = ReceivedMessage(
+        let message = IncomingMessage(
             joinRef: joinRef ?? self.joinRef,
             ref: ref,
             topic: self.topic,

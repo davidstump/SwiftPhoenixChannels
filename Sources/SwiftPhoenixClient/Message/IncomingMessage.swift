@@ -1,5 +1,5 @@
 //
-//  ReceivedMessage.swift
+//  IncomingMessage.swift
 //  SwiftPhoenixClient
 //
 //  Created by Daniel Rees on 1/27/25.
@@ -22,7 +22,7 @@ import Foundation
 ///
 /// In addition to the parsed values from the server, the original messages can also be
 /// accessed for additional information.
-public struct ReceivedMessage {
+public struct IncomingMessage {
     
     /// The unique string ref when joining
     public let joinRef: String?
@@ -55,11 +55,11 @@ enum ReceivedPayload {
     /// The payload was fully accessible at the point of Serialization. The data
     /// excludes all other values, such as status, ref, topic, and only represents
     /// the payload from the Server.
-    case decided(Data)
+    case decided(payload: Data)
     
     /// The payload was not fully decoded at the point of Serialization and must
     /// be full decoded at the point of being triggered to a Channel subscription.
     /// In this case, the data value is the _entire message_ received from the server,
     /// including the join_ref, ref,  topic, etc.
-    case deferred(Data)
+    case deferred(entireIncomingMessageData: Data)
 }

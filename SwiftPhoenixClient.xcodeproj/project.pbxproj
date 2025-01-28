@@ -22,7 +22,7 @@
 		1284F4C72D4801320090D0DA /* DecodablePayloadParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284F4C62D4801320090D0DA /* DecodablePayloadParser.swift */; };
 		1284F4C92D48035C0090D0DA /* PayloadParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284F4C82D48035C0090D0DA /* PayloadParser.swift */; };
 		1284F4CC2D48182F0090D0DA /* OutgoingMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284F4CB2D48182F0090D0DA /* OutgoingMessage.swift */; };
-		1284F4CE2D4818EF0090D0DA /* ReceivedMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284F4CD2D4818EF0090D0DA /* ReceivedMessage.swift */; };
+		1284F4CE2D4818EF0090D0DA /* IncomingMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284F4CD2D4818EF0090D0DA /* IncomingMessage.swift */; };
 		1284F4D02D481E960090D0DA /* PartialMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284F4CF2D481E960090D0DA /* PartialMessage.swift */; };
 		12922E202543B10B0034B257 /* Socket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12922E1F2543B10B0034B257 /* Socket.swift */; };
 		12922E222543B37B0034B257 /* PhoenixTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12922E212543B37B0034B257 /* PhoenixTransport.swift */; };
@@ -108,7 +108,7 @@
 		1284F4C62D4801320090D0DA /* DecodablePayloadParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecodablePayloadParser.swift; sourceTree = "<group>"; };
 		1284F4C82D48035C0090D0DA /* PayloadParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayloadParser.swift; sourceTree = "<group>"; };
 		1284F4CB2D48182F0090D0DA /* OutgoingMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutgoingMessage.swift; sourceTree = "<group>"; };
-		1284F4CD2D4818EF0090D0DA /* ReceivedMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivedMessage.swift; sourceTree = "<group>"; };
+		1284F4CD2D4818EF0090D0DA /* IncomingMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingMessage.swift; sourceTree = "<group>"; };
 		1284F4CF2D481E960090D0DA /* PartialMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartialMessage.swift; sourceTree = "<group>"; };
 		12922E1F2543B10B0034B257 /* Socket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Socket.swift; sourceTree = "<group>"; };
 		12922E212543B37B0034B257 /* PhoenixTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoenixTransport.swift; sourceTree = "<group>"; };
@@ -295,7 +295,7 @@
 			isa = PBXGroup;
 			children = (
 				1284F4CB2D48182F0090D0DA /* OutgoingMessage.swift */,
-				1284F4CD2D4818EF0090D0DA /* ReceivedMessage.swift */,
+				1284F4CD2D4818EF0090D0DA /* IncomingMessage.swift */,
 				1284F4CF2D481E960090D0DA /* PartialMessage.swift */,
 			);
 			path = Message;
@@ -558,7 +558,7 @@
 				634398462CCFDA9200A2B9AC /* PayloadDecoder.swift in Sources */,
 				63F3765329E7296F00A5AB6E /* SynchronizedArray.swift in Sources */,
 				1284F4C32D4801100090D0DA /* DataPayloadParser.swift in Sources */,
-				1284F4CE2D4818EF0090D0DA /* ReceivedMessage.swift in Sources */,
+				1284F4CE2D4818EF0090D0DA /* IncomingMessage.swift in Sources */,
 				12991E09254C3F5B00BB8650 /* Presence.swift in Sources */,
 				12991E01254C3F1300BB8650 /* TimeoutTimer.swift in Sources */,
 				1284F4C92D48035C0090D0DA /* PayloadParser.swift in Sources */,

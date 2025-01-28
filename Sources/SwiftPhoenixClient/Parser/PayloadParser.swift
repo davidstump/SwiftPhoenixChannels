@@ -11,5 +11,5 @@ import Foundation
 protocol PayloadParser<PayloadType> {
     associatedtype PayloadType
     
-    func parse(_ receivedMessage: ReceivedMessage) -> Result<PayloadType, any Error>
+    func parse(_ incomingMessage: IncomingMessage) -> Result<PayloadType, any Error>
 }

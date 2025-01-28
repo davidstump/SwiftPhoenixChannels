@@ -42,7 +42,7 @@ public class Push {
     public var timeout: TimeInterval
     
     /// The server's response to the Push
-    var receivedMessage: ReceivedMessage?
+    var receivedMessage: IncomingMessage?
     
     /// Timer which triggers a timeout event
     var timeoutTimer: TimerQueue
@@ -161,7 +161,7 @@ public class Push {
     
     @discardableResult
     func internalReceive(_ status: String,
-                         callback: @escaping (ReceivedMessage) -> Void) -> Push {
+                         callback: @escaping (IncomingMessage) -> Void) -> Push {
         let subscriptionCallback = InternalSubscriptionCallback(callback: callback)
         return _receive(status, callback: subscriptionCallback)
     }
@@ -193,7 +193,7 @@ public class Push {
     ///
     /// - parameter status: Status which was received, e.g. "ok", "error", "timeout"
     /// - parameter response: Response that was received
-    private func matchReceive(_ status: String, message: ReceivedMessage) {
+    private func matchReceive(_ status: String, message: IncomingMessage) {
         self.receiveHooks.forEach { hook in
             if hook.status == status {
                 hook.callback.trigger(message)
@@ -233,16 +233,16 @@ public class Push {
         
         /// If a response is received  before the Timer triggers, cancel timer
         /// and match the recevied event to it's corresponding hook
-        channel.on(refEvent)._message { [weak self] receivedMessage in
+        channel.on(refEvent)._message { [weak self] incomingMessage in
             guard let self else { return }
             
             self.cancelRefEvent()
             self.cancelTimeout()
-            self.receivedMessage = receivedMessage
+            self.receivedMessage = incomingMessage
             
             /// Check if there is event a status available
-            guard let status = receivedMessage.status else { return }
-            self.matchReceive(status, message: receivedMessage)
+            guard let status = incomingMessage.status else { return }
+            self.matchReceive(status, message: incomingMessage)
         }
 
         

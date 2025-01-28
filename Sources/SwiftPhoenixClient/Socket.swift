@@ -31,7 +31,7 @@ struct StateChangeCallbacks {
     let open: SynchronizedArray<(ref: String, callback: ((URLResponse?) -> Void))> = .init()
     let close: SynchronizedArray<(ref: String, callback: ((URLSessionWebSocketTask.CloseCode, String?) -> Void))> = .init()
     let error: SynchronizedArray<(ref: String, callback: ((Error, URLResponse?) -> Void))> = .init()
-    let message: SynchronizedArray<(ref: String, callback: ((ReceivedMessage) -> Void))> = .init()
+    let message: SynchronizedArray<(ref: String, callback: ((IncomingMessage) -> Void))> = .init()
 }
 
 
@@ -389,7 +389,7 @@ public class Socket: PhoenixTransportDelegate {
     ///
     /// - parameter callback: Called when the Socket receives a message event
     @discardableResult
-    public func onMessage(callback: @escaping (ReceivedMessage) -> Void) -> String {
+    public func onMessage(callback: @escaping (IncomingMessage) -> Void) -> String {
         self.append(callback: callback, to: self.stateChangeCallbacks.message)
     }
     
@@ -576,7 +576,7 @@ public class Socket: PhoenixTransportDelegate {
         self.stateChangeCallbacks.error.forEach({ $0.callback(error, response) })
     }
     
-    internal func onConnectionMessage(_ message: ReceivedMessage) {
+    internal func onConnectionMessage(_ message: IncomingMessage) {
         // Clear heartbeat ref, preventing a heartbeat timeout disconnect
         if message.ref == pendingHeartbeatRef { pendingHeartbeatRef = nil }
         
