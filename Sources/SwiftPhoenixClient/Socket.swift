@@ -470,27 +470,53 @@ public class Socket: PhoenixTransportDelegate {
     /// - parameter payload:
     /// - parameter ref: Optional. Defaults to nil
     /// - parameter joinRef: Optional. Defaults to nil
-    internal func push(topic: String,
-                       event: String,
-                       payload: Data,
-                       ref: String? = nil,
-                       joinRef: String? = nil,
-                       asBinary: Bool = false) {
-        
+//    internal func push(topic: String,
+//                       event: String,
+//                       payload: Data,
+//                       ref: String? = nil,
+//                       joinRef: String? = nil,
+//                       asBinary: Bool = false) {
+//        
+//        let callback: (() throws -> ()) = { [weak self] in
+//            guard let self else { return }
+//            
+//            let message = OutgoingMessage(
+//                joinRef: joinRef,
+//                ref: ref,
+//                topic: topic,
+//                event: event,
+//                payload: payload,
+//                status: nil
+//            )
+//
+//            if asBinary {
+//                let binary = serializer.binaryEncode(message: message)
+//                self.logItems("push", "Sending binary \(binary)" )
+//                self.connection?.send(data: binary)
+//                
+//            } else {
+//                let text = try serializer.encode(message: message)
+//                self.logItems("push", "Sending \(text)" )
+//                self.connection?.send(string: text)
+//            }
+//        }
+//        
+//        /// If the socket is connected, then execute the callback immediately.
+//        if isConnected {
+//            try? callback()
+//        } else {
+//            /// If the socket is not connected, add the push to a buffer which will
+//            /// be sent immediately upon connection.
+//            self.sendBuffer.append((ref: ref, callback: callback))
+//        }
+//    }
+    
+    internal func push(outgoing message: OutgoingMessage) {
         let callback: (() throws -> ()) = { [weak self] in
             guard let self else { return }
             
-            let message = Message(
-                joinRef: joinRef,
-                ref: ref,
-                topic: topic,
-                event: event,
-                payload: payload,
-                status: nil
-            )
-
-            if asBinary {
-                let binary = serializer.binaryEncode(message: message)
+            if message.isBinary {
+                let binary = try serializer.binaryEncode(message: message)
                 self.logItems("push", "Sending binary \(binary)" )
                 self.connection?.send(data: binary)
                 
@@ -507,7 +533,7 @@ public class Socket: PhoenixTransportDelegate {
         } else {
             /// If the socket is not connected, add the push to a buffer which will
             /// be sent immediately upon connection.
-            self.sendBuffer.append((ref: ref, callback: callback))
+            self.sendBuffer.append((ref: message.ref, callback: callback))
         }
     }
     
@@ -661,11 +687,9 @@ public class Socket: PhoenixTransportDelegate {
         }
         
         // The last heartbeat was acknowledged by the server. Send another one
-        self.pendingHeartbeatRef = self.makeRef()
-        self.push(topic: "phoenix",
-                  event: ChannelEvent.heartbeat,
-                  payload: Defaults.emptyPayload,
-                  ref: self.pendingHeartbeatRef)
+        let nextHeartbeatMessage = OutgoingMessage(heartbeatRef: self.makeRef())
+        self.pendingHeartbeatRef = nextHeartbeatMessage.ref
+        self.push(outgoing: nextHeartbeatMessage)
     }
     
     internal func abnormalClose(_ reason: String) {

@@ -35,11 +35,30 @@ public struct OutgoingMessage {
     
     /// The payload of the message to send or that was received.`
     public let payload: OutgoingPayload
+    
+    internal var isBinary: Bool {
+        switch payload {
+        case .binary(_): return true
+        default: return false
+        }
+    }
+}
+
+extension OutgoingMessage {
+    init(heartbeatRef: String) {
+        self.init(
+            joinRef: nil,
+            ref: heartbeatRef, 
+            topic: "phoenix",
+            event: ChannelEvent.heartbeat,
+            payload: .json([:])
+        )
+    }
 }
 
 public enum OutgoingPayload {
     case binary(Data)
-    case codable(Codable)
+    case encodable(Encodable)
     case json(Any)
 }
 

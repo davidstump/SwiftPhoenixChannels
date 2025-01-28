@@ -24,6 +24,7 @@
 		1284F4CC2D48182F0090D0DA /* OutgoingMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284F4CB2D48182F0090D0DA /* OutgoingMessage.swift */; };
 		1284F4CE2D4818EF0090D0DA /* IncomingMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284F4CD2D4818EF0090D0DA /* IncomingMessage.swift */; };
 		1284F4D02D481E960090D0DA /* PartialMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284F4CF2D481E960090D0DA /* PartialMessage.swift */; };
+		1284F4D22D4959E20090D0DA /* OutgoingShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1284F4D12D4959E20090D0DA /* OutgoingShape.swift */; };
 		12922E202543B10B0034B257 /* Socket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12922E1F2543B10B0034B257 /* Socket.swift */; };
 		12922E222543B37B0034B257 /* PhoenixTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12922E212543B37B0034B257 /* PhoenixTransport.swift */; };
 		12991DFB254C3EB800BB8650 /* Defaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12991DFA254C3EB800BB8650 /* Defaults.swift */; };
@@ -110,6 +111,7 @@
 		1284F4CB2D48182F0090D0DA /* OutgoingMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutgoingMessage.swift; sourceTree = "<group>"; };
 		1284F4CD2D4818EF0090D0DA /* IncomingMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingMessage.swift; sourceTree = "<group>"; };
 		1284F4CF2D481E960090D0DA /* PartialMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartialMessage.swift; sourceTree = "<group>"; };
+		1284F4D12D4959E20090D0DA /* OutgoingShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutgoingShape.swift; sourceTree = "<group>"; };
 		12922E1F2543B10B0034B257 /* Socket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Socket.swift; sourceTree = "<group>"; };
 		12922E212543B37B0034B257 /* PhoenixTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoenixTransport.swift; sourceTree = "<group>"; };
 		12991DFA254C3EB800BB8650 /* Defaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Defaults.swift; sourceTree = "<group>"; };
@@ -297,6 +299,7 @@
 				1284F4CB2D48182F0090D0DA /* OutgoingMessage.swift */,
 				1284F4CD2D4818EF0090D0DA /* IncomingMessage.swift */,
 				1284F4CF2D481E960090D0DA /* PartialMessage.swift */,
+				1284F4D12D4959E20090D0DA /* OutgoingShape.swift */,
 			);
 			path = Message;
 			sourceTree = "<group>";
@@ -560,6 +563,7 @@
 				1284F4C32D4801100090D0DA /* DataPayloadParser.swift in Sources */,
 				1284F4CE2D4818EF0090D0DA /* IncomingMessage.swift in Sources */,
 				12991E09254C3F5B00BB8650 /* Presence.swift in Sources */,
+				1284F4D22D4959E20090D0DA /* OutgoingShape.swift in Sources */,
 				12991E01254C3F1300BB8650 /* TimeoutTimer.swift in Sources */,
 				1284F4C92D48035C0090D0DA /* PayloadParser.swift in Sources */,
 				12991E07254C3F4B00BB8650 /* Message.swift in Sources */,

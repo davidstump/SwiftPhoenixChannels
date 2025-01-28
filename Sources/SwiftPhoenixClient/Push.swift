@@ -35,8 +35,11 @@ public class Push {
     /// The event, for example `phx_join`
     public let event: String
     
+    /// The topic of the channel that is performing the Push
+    public let topic: String
+    
     /// The payload, for example ["user_id": "abc123"], expressed as Data
-    public var payload: Data
+    public var payload: OutgoingPayload
     
     /// The push timeout. Default is 10.0 seconds
     public var timeout: TimeInterval
@@ -62,9 +65,6 @@ public class Push {
     /// The event that is associated with the reference ID of the Push
     var refEvent: String?
     
-    /// Determines if the data payload should be pushed as a binary instead of a string
-    let asBinary: Bool
-    
     var decoder: PayloadDecoder {
         return self.channel?.socket?.decoder ?? PhoenixPayloadDecoder()
     }
@@ -81,12 +81,12 @@ public class Push {
     /// - parameter timeout: Optional. The push timeout. Default is 10.0s
     init(channel: Channel,
          event: String,
-         payload: Data,
-         timeout: TimeInterval,
-         asBinary: Bool = false
+         payload: OutgoingPayload,
+         timeout: TimeInterval
     ) {
         self.channel = channel
         self.event = event
+        self.topic = channel.topic
         self.payload = payload
         self.timeout = timeout
         self.receivedMessage = nil
@@ -94,7 +94,6 @@ public class Push {
         self.receiveHooks = SynchronizedArray()
         self.sent = false
         self.ref = nil
-        self.asBinary = asBinary
     }
     
     
@@ -114,14 +113,16 @@ public class Push {
         
         self.startTimeout()
         self.sent = true
-        self.channel?.socket?.push(
-            topic: channel?.topic ?? "",
-            event: self.event,
-            payload: self.payload,
+        
+        let message = OutgoingMessage(
+            joinRef: self.channel?.joinRef,
             ref: self.ref,
-            joinRef: channel?.joinRef,
-            asBinary: self.asBinary
+            topic: self.topic,
+            event: self.event,
+            payload: self.payload
         )
+        
+        self.channel?.socket?.push(outgoing: message)
     }
     
     /// Receive a specific event when sending an Outbound message. Subscribing
@@ -268,8 +269,6 @@ public class Push {
         /// If there is no ref event, then there is nothing to trigger on the channel
         guard let refEvent = self.refEvent else { return }
         
-//        var mutPayload = payload
-//        mutPayload["status"] = status
         self.channel?.trigger(
             event: refEvent,
             payload: payload,

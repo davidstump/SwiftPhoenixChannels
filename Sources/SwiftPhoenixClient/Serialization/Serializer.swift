@@ -16,7 +16,7 @@ public protocol Serializer {
     ///
     /// - parameter message: `MessageV6` with a json payload to encode
     /// - returns: Raw text to send back to the server
-    func encode(message: Message) throws -> String
+    func encode(message: OutgoingMessage) throws -> String
     
     ///
     /// Encodes a `MessageV6` into `Data` to be sent back to a Phoenix server as binary data
@@ -24,7 +24,7 @@ public protocol Serializer {
     /// - parameter message `SocketMessage` with a binary payload to encode
     /// - returns Binary data to send back to the server
     ///
-    func binaryEncode(message: Message) -> Data
+    func binaryEncode(message: OutgoingMessage) throws -> Data
     
     /// Decodes a raw `String` from a Phoenix server into a `SocketMessage` structure
     /// Throws a `preconditionFailure` if passed a malformed message
@@ -43,8 +43,6 @@ public protocol Serializer {
     func binaryDecode(data: Data) throws -> IncomingMessage
     
 }
-
-
 
 ///
 /// The default implementation of [Serializer] for encoding and decoding messages. Matches the JS
@@ -71,44 +69,45 @@ public class PhoenixSerializer: Serializer {
     
     public func encode(message: OutgoingMessage) throws -> String {
         switch message.payload {
-        case .binary(let data):
-            // TODO: Binary Encode
-            return ""
-        case .codable(let codable):
-            return ""
+        case .binary(_):
+            throw PhxError.serializerError(reason: .binarySentAsText(message))
+            
+        case .encodable(let encodablePayload):
+            let outgoingShape = OutgoingShape(message: message, payload: encodablePayload)
+            let outgoingJsonData = try self.payloadEncoder.encode(outgoingShape)
+            guard let outgoingText = String(data: outgoingJsonData, encoding: .utf8) else {
+                throw PhxError.serializerError(
+                    reason: .stringFromDataFailed(
+                        string: "Expected json object to serialize to a String. \(outgoingShape)"
+                    )
+                )
+            }
+            return outgoingText
             
             
-        case .json(let any):
-            return ""
+        case .json(let outgoingJsonPayload):
+            let outgoingShape: [Any] = [
+                message.joinRef as Any,
+                message.ref as Any,
+                message.topic,
+                message.event,
+                outgoingJsonPayload
+            ]
+            
+            let outgoingJsonData = try self.payloadEncoder.encode(any: outgoingShape)
+            guard let outgoingText = String(data: outgoingJsonData, encoding: .utf8) else {
+                throw PhxError.serializerError(
+                    reason: .stringFromDataFailed(
+                        string: "Expected json object to serialize to a String. \(outgoingShape)"
+                    )
+                )
+            }
+            
+            return outgoingText
         }
     }
     
-    
-    public func encode(message: Message) throws -> String {
-        let json = try payloadDecoder.decode(JsonElement.self, from: message.payload)
-        
-        let serverMessage = OutboundMessage(
-            joinRef: message.joinRef,
-            ref: message.ref,
-            topic: message.topic,
-            event: message.event,
-            payload: json
-        )
-        
-        let jsonData = try self.payloadEncoder.encode(serverMessage)
-        
-        guard
-            let jsonString = String(data: jsonData, encoding: .utf8)
-        else {
-            throw PhxError.serializerError(
-                reason: .stringFromDataFailed(string: "Expected json object to serialize to a String. \(serverMessage)")
-            )
-        }
-        
-        return jsonString
-    }
-    
-    public func binaryEncode(message: Message) -> Data {
+    public func binaryEncode(message: OutgoingMessage) throws -> Data {
         var byteArray: [UInt8] = []
         
         // Add the KIND, which is always a PUSH from the client to the server
@@ -132,7 +131,15 @@ public class PhoenixSerializer: Serializer {
         
         byteArray.append(contentsOf: message.topic.utf8.map { UInt8($0) })
         byteArray.append(contentsOf: message.event.utf8.map { UInt8($0) })
-        byteArray.append(contentsOf: message.payload)
+        
+        switch message.payload {
+        case .binary(let binaryPayload):
+            byteArray.append(contentsOf: binaryPayload)
+        case .encodable(_):
+            throw PhxError.serializerError(reason: .textSentAsBinary(message))
+        case .json(_):
+            throw PhxError.serializerError(reason: .textSentAsBinary(message))
+        }
         
         return Data(byteArray)
     }

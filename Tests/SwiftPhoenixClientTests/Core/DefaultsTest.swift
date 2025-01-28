@@ -44,8 +44,4 @@ struct DefaultsTest {
         #expect(backoff(4) == 10)
         #expect(backoff(5) == 10)
     }
-    
-    @Test func emptyPayload_isEmptyJson() async throws {
-        #expect(String(data: Defaults.emptyPayload, encoding: .utf8) == "{}")
-    }
 }

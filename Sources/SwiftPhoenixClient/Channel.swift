@@ -51,14 +51,19 @@ public class Channel {
     
     /// The params sent when joining the channel
     public var params: Payload {
-        didSet {
-            let data = try! self.socket?.encoder.encode(params)
-            self.joinPush.payload = data!
-        }
+        didSet { self.joinPush.payload = .json(params) }
     }
     
     /// The Socket that the channel belongs to
     weak var socket: Socket?
+    
+    var decoder: PayloadDecoder {
+        return self.socket?.decoder ?? PhoenixPayloadDecoder()
+    }
+    
+    var encoder: PayloadEncoder {
+        return self.socket?.encoder ?? PhoenixPayloadEncoder()
+    }
     
     /// Current state of the Channel
     var state: ChannelState
@@ -138,12 +143,10 @@ public class Channel {
         
         if let ref = onOpenRef { self.stateChangeRefs.append(ref) }
         
-        
         // Setup Push Event to be sent when joining
-        let data = try! self.socket?.encoder.encode(params)
         self.joinPush = Push(channel: self,
                              event: ChannelEvent.join,
-                             payload: data!,
+                             payload: .json(params),
                              timeout: self.timeout)
         
         /// Handle when a response is received after join()
@@ -180,7 +183,7 @@ public class Channel {
             // Send a Push to the server to leave the channel
             let leavePush = Push(channel: self,
                                  event: ChannelEvent.leave,
-                                 payload: Defaults.emptyPayload,
+                                 payload: .json([:]),
                                  timeout: self.timeout)
             leavePush.send()
             
@@ -389,14 +392,13 @@ public class Channel {
     public func push(_ event: String,
                      payload: Payload,
                      timeout: TimeInterval = Defaults.timeoutInterval) -> Push {
-        guard joinedOnce else { fatalError("Tried to push \(event) to \(self.topic) before joining. Use channel.join() before pushing events") }
-        guard let payload = try? self.socket?.encoder.encode(payload) else {
-            fatalError("Tried to push \(payload) to \(self.topic) but could not encode.")
+        guard joinedOnce else {
+            fatalError("Tried to push \(event) to \(self.topic) before joining. Use channel.join() before pushing events")
         }
         
         let pushEvent = Push(channel: self,
                              event: event,
-                             payload: payload,
+                             payload: .json(payload),
                              timeout: timeout)
         if canPush {
             pushEvent.send()
@@ -426,9 +428,8 @@ public class Channel {
         
         let pushEvent = Push(channel: self,
                              event: event,
-                             payload: payload,
-                             timeout: timeout,
-                             asBinary: true)
+                             payload: .binary(payload),
+                             timeout: timeout)
         if canPush {
             pushEvent.send()
         } else {
@@ -475,7 +476,7 @@ public class Channel {
         // Push event to send to the server
         let leavePush = Push(channel: self,
                              event: ChannelEvent.leave,
-                             payload: Defaults.emptyPayload,
+                             payload: .json([:]),
                              timeout: timeout)
         
         // Perform the same behavior if successfully left the channel
@@ -541,25 +542,6 @@ public class Channel {
     }
     
     /// Triggers an event to the correct event bindings created by
-    /// `channel.on("event")`.
-    ///
-    /// - parameter message: Message to pass to the event bindings
-    func trigger(_ incomingMessage: IncomingMessage) {
-        let decoder = self.socket?.decoder ?? PhoenixPayloadDecoder()
-        let encoder = self.socket?.encoder ?? PhoenixPayloadEncoder()
-        let handledMessage = self.onMessage(incomingMessage)
-        
-        self.subscriptions.forEach { subscription in
-            if subscription.event == incomingMessage.event {
-                subscription.trigger(handledMessage)
-            }
-            
-        }
-    }
-    
-    
-    
-    /// Triggers an event to the correct event bindings created by
     //// `channel.on("event")`.
     ///
     /// - parameter event: Event to trigger
@@ -568,40 +550,37 @@ public class Channel {
     /// - parameter joinRef: Ref of the join event. Defaults to nil
     func trigger(event: String,
                  payload: Payload = [:],
-                 ref: String = "",
-                 joinRef: String? = nil,
                  status: String? = nil) {
-        let encoder = PhoenixPayloadEncoder()
-        let data = try? encoder.encode(payload)
+        // Trigger here is internal and pretty safe to force unwrap.
+        let data = try! self.encoder.encode(payload)
         
-        self.trigger(
-            event: event,
-            payload: data!,
-            ref: ref,
-            joinRef: joinRef,
-            status: status
-        )
-    }
-    
-    func trigger(event: String,
-                 payload: Data,
-                 ref: String?,
-                 joinRef: String? = nil,
-                 status: String? = nil) {
         let message = IncomingMessage(
             joinRef: joinRef ?? self.joinRef,
-            ref: ref,
+            ref: nil,
             topic: self.topic,
             event: event,
             status: status,
-            payload: .decided(payload),
-            rawText: String(data: payload, encoding: .utf8),
+            payload: .decided(data),
+            rawText: String(data: data, encoding: .utf8),
             rawBinary: nil
         )
         
         self.trigger(message)
     }
     
+    /// Triggers an event to the correct event bindings created by
+    /// `channel.on("event")`.
+    ///
+    /// - parameter message: Message to pass to the event bindings
+    func trigger(_ incomingMessage: IncomingMessage) {
+        let handledMessage = self.onMessage(incomingMessage)
+        
+        self.subscriptions.forEach { subscription in
+            if subscription.event == incomingMessage.event {
+                subscription.trigger(handledMessage)
+            }
+        }
+    }
     
     /// - parameter ref: The ref of the event push
     /// - return: The event name of the reply

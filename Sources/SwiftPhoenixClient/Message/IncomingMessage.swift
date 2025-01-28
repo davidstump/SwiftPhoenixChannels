@@ -55,11 +55,11 @@ enum ReceivedPayload {
     /// The payload was fully accessible at the point of Serialization. The data
     /// excludes all other values, such as status, ref, topic, and only represents
     /// the payload from the Server.
-    case decided(payload: Data)
+    case decided(Data)
     
     /// The payload was not fully decoded at the point of Serialization and must
     /// be full decoded at the point of being triggered to a Channel subscription.
     /// In this case, the data value is the _entire message_ received from the server,
     /// including the join_ref, ref,  topic, etc.
-    case deferred(entireIncomingMessageData: Data)
+    case deferred(Data)
 }

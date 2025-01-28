@@ -59,10 +59,6 @@ public class Defaults {
     
     /// Dispatch Queue for Heartbeat timers to execute upon
     public static let heartbeatQueue: DispatchQueue = DispatchQueue(label: "com.phoenix.socket.heartbeat")
-    
-    /// Some messages require an empty payload. This represents an empty JSON
-    /// payload conveted to JSON.
-    static let emptyPayload: Data = try! PhoenixPayloadEncoder().encode([:])
 }
 
 
