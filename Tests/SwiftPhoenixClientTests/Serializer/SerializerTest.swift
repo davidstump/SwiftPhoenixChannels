@@ -12,7 +12,7 @@ import XCTest
 
 final class SerializerTest {
     
-    private let serializer: Serializer = PhoenixSerializer()
+    private let serializer: TransportSerializer = PhoenixTransportSerializer()
     private let payloadEncoder: PayloadEncoder = PhoenixPayloadEncoder()
     
     // - - - - - encode(.dictionary) - - - - -
