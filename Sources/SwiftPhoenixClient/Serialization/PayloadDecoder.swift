@@ -9,30 +9,22 @@
 import Foundation
 
 ///
-/// Provides methods for decoding an inbound mesage into a Decodable
-/// or a [String: Any].
+/// Decodes Payloads as either a Decodable or a generic `Any` JsonObject
 ///
 public protocol PayloadDecoder {
     
     func decode<T>(_ type: T.Type, from data: Data) throws -> T where T : Decodable
-    
-    func decode(_ data: Data) throws -> [String: Any]
-    
-    func decodeJsonObject(from data: Data) throws -> Any
+    func decode(from data: Data) throws -> Any
     
 }
 
 public class PhoenixPayloadDecoder: PayloadDecoder {
     public func decode<T>(_ type: T.Type,
-                          from data: Data) throws -> T where T : Decodable {
+                                   from data: Data) throws -> T where T : Decodable {
         return try JSONDecoder().decode(type, from: data)
     }
     
-    public func decode(_ data: Data) throws -> [String : Any] {
-        return try JSONSerialization.jsonObject(with: data) as! [String: Any]
-    }
-    
-    public func decodeJsonObject(from data: Data) throws -> Any {
+    public func decode(from data: Data) throws -> Any {
         return try JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
     }
 }

@@ -19,7 +19,7 @@ class DataPayloadParser: PayloadParser {
             case .decided(let payloadData):
                 return payloadData
             case .deferred(let incomingMessageData):
-                let array = try payloadDecoder.decodeJsonObject(from: incomingMessageData) as! [Any]
+                let array = try payloadDecoder.decode(from: incomingMessageData) as! [Any]
                 let payloadJsonObject = array[4]
              
                 if incomingMessage.event == ChannelEvent.reply {
