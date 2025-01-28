@@ -43,10 +43,7 @@
 		12EF620625524B6800A6EE9B /* PresenceSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EF620125524B6800A6EE9B /* PresenceSpec.swift */; };
 		12EF620725524B6800A6EE9B /* TimeoutTimerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EF620225524B6800A6EE9B /* TimeoutTimerSpec.swift */; };
 		12EF620825524B6800A6EE9B /* DefaultSerializerSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EF620325524B6800A6EE9B /* DefaultSerializerSpec.swift */; };
-		6322938E2C952508003EEDE1 /* JsonElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6322938D2C952508003EEDE1 /* JsonElement.swift */; };
-		632293902C952689003EEDE1 /* InboundMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6322938F2C952689003EEDE1 /* InboundMessage.swift */; };
 		634398462CCFDA9200A2B9AC /* PayloadDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634398452CCFDA9200A2B9AC /* PayloadDecoder.swift */; };
-		634398482CCFDC0200A2B9AC /* OutboundMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634398472CCFDC0200A2B9AC /* OutboundMessage.swift */; };
 		6343984A2CCFDDBD00A2B9AC /* PhxError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634398492CCFDDBD00A2B9AC /* PhxError.swift */; };
 		6343984E2CD0075B00A2B9AC /* DefaultsTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6343984D2CD0075B00A2B9AC /* DefaultsTest.swift */; };
 		634398502CD009F800A2B9AC /* SocketTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6343984F2CD009F800A2B9AC /* SocketTest.swift */; };
@@ -130,10 +127,7 @@
 		12EF620125524B6800A6EE9B /* PresenceSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresenceSpec.swift; sourceTree = "<group>"; };
 		12EF620225524B6800A6EE9B /* TimeoutTimerSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimeoutTimerSpec.swift; sourceTree = "<group>"; };
 		12EF620325524B6800A6EE9B /* DefaultSerializerSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultSerializerSpec.swift; sourceTree = "<group>"; };
-		6322938D2C952508003EEDE1 /* JsonElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JsonElement.swift; sourceTree = "<group>"; };
-		6322938F2C952689003EEDE1 /* InboundMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboundMessage.swift; sourceTree = "<group>"; };
 		634398452CCFDA9200A2B9AC /* PayloadDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayloadDecoder.swift; sourceTree = "<group>"; };
-		634398472CCFDC0200A2B9AC /* OutboundMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutboundMessage.swift; sourceTree = "<group>"; };
 		634398492CCFDDBD00A2B9AC /* PhxError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhxError.swift; sourceTree = "<group>"; };
 		6343984D2CD0075B00A2B9AC /* DefaultsTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultsTest.swift; sourceTree = "<group>"; };
 		6343984F2CD009F800A2B9AC /* SocketTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketTest.swift; sourceTree = "<group>"; };
@@ -360,9 +354,6 @@
 		63BBCEFE2B897AF4004A16C9 /* Serialization */ = {
 			isa = PBXGroup;
 			children = (
-				6322938F2C952689003EEDE1 /* InboundMessage.swift */,
-				6322938D2C952508003EEDE1 /* JsonElement.swift */,
-				634398472CCFDC0200A2B9AC /* OutboundMessage.swift */,
 				634398452CCFDA9200A2B9AC /* PayloadDecoder.swift */,
 				634E20EB2CC4813D0037A570 /* PayloadEncoder.swift */,
 				63BBCF022B897D87004A16C9 /* Serializer.swift */,
@@ -548,14 +539,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6322938E2C952508003EEDE1 /* JsonElement.swift in Sources */,
 				12991DFB254C3EB800BB8650 /* Defaults.swift in Sources */,
 				634E20EC2CC4813D0037A570 /* PayloadEncoder.swift in Sources */,
 				12991E05254C3F3300BB8650 /* Channel.swift in Sources */,
 				63BBCF032B897D87004A16C9 /* Serializer.swift in Sources */,
 				1284F4C02D47C8080090D0DA /* ChannelSubscription.swift in Sources */,
-				632293902C952689003EEDE1 /* InboundMessage.swift in Sources */,
-				634398482CCFDC0200A2B9AC /* OutboundMessage.swift in Sources */,
 				1284F4CC2D48182F0090D0DA /* OutgoingMessage.swift in Sources */,
 				1284F4C72D4801320090D0DA /* DecodablePayloadParser.swift in Sources */,
 				634398462CCFDA9200A2B9AC /* PayloadDecoder.swift in Sources */,

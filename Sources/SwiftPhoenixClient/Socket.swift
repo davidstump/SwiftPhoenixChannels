@@ -464,53 +464,6 @@ public class Socket: PhoenixTransportDelegate {
     /// Sends data through the Socket. This method is internal. Instead, you
     /// should call `push(_:, payload:, timeout:)` on the Channel you are
     /// sending an event to.
-    ///
-    /// - parameter topic:
-    /// - parameter event:
-    /// - parameter payload:
-    /// - parameter ref: Optional. Defaults to nil
-    /// - parameter joinRef: Optional. Defaults to nil
-//    internal func push(topic: String,
-//                       event: String,
-//                       payload: Data,
-//                       ref: String? = nil,
-//                       joinRef: String? = nil,
-//                       asBinary: Bool = false) {
-//        
-//        let callback: (() throws -> ()) = { [weak self] in
-//            guard let self else { return }
-//            
-//            let message = OutgoingMessage(
-//                joinRef: joinRef,
-//                ref: ref,
-//                topic: topic,
-//                event: event,
-//                payload: payload,
-//                status: nil
-//            )
-//
-//            if asBinary {
-//                let binary = serializer.binaryEncode(message: message)
-//                self.logItems("push", "Sending binary \(binary)" )
-//                self.connection?.send(data: binary)
-//                
-//            } else {
-//                let text = try serializer.encode(message: message)
-//                self.logItems("push", "Sending \(text)" )
-//                self.connection?.send(string: text)
-//            }
-//        }
-//        
-//        /// If the socket is connected, then execute the callback immediately.
-//        if isConnected {
-//            try? callback()
-//        } else {
-//            /// If the socket is not connected, add the push to a buffer which will
-//            /// be sent immediately upon connection.
-//            self.sendBuffer.append((ref: ref, callback: callback))
-//        }
-//    }
-    
     internal func push(outgoing message: OutgoingMessage) {
         let callback: (() throws -> ()) = { [weak self] in
             guard let self else { return }

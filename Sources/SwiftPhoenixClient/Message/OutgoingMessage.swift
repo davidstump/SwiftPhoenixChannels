@@ -20,20 +20,10 @@ import Foundation
 ///
 public struct OutgoingMessage {
         
-    /// The unique string ref when joining
     public let joinRef: String?
-    
-    /// The unique string ref
     public let ref: String?
-    
-    /// The string topic or topic:subtopic pair namespace, for example
-    /// "messages", "messages:123"
     public let topic: String
-    
-    /// The string event name, for example "phx_join"
     public let event: String
-    
-    /// The payload of the message to send or that was received.`
     public let payload: OutgoingPayload
     
     internal var isBinary: Bool {
