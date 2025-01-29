@@ -35,9 +35,6 @@ public enum PhxError: Error {
         
         /// Binary payload was sent to text encode
         case binarySentAsText(OutgoingMessage)
-        
-        /// Text payload was sent to binary encode
-        case textSentAsBinary(OutgoingMessage)
     }
     
     case serializerError(reason: SerializerReason)

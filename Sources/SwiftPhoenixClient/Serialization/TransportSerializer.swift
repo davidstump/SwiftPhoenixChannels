@@ -136,10 +136,14 @@ public class PhoenixTransportSerializer: TransportSerializer {
         switch message.payload {
         case .binary(let binaryPayload):
             byteArray.append(contentsOf: binaryPayload)
-        case .encodable(_):
-            throw PhxError.serializerError(reason: .textSentAsBinary(message))
-        case .json(_):
-            throw PhxError.serializerError(reason: .textSentAsBinary(message))
+            
+        case .encodable(let encodable):
+            let binaryPayload = try self.payloadEncoder.encode(encodable)
+            byteArray.append(contentsOf: binaryPayload)
+
+        case .json(let json):
+            let binaryPayload = try self.payloadEncoder.encode(any: json)
+            byteArray.append(contentsOf: binaryPayload)
         }
         
         return Data(byteArray)
