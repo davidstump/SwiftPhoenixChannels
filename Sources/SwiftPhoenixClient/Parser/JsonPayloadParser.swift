@@ -8,11 +8,22 @@
 
 import Foundation
 
-
+///
+/// `PayloadParser` that attempts to convert an `IncomingMessage`'s payload to
+/// an `Any` JsonObject.
+///
 class JsonPayloadParser: PayloadParser {
     
-    let payloadDecoder = PhoenixPayloadDecoder()
-    let payloadEncoder = PhoenixPayloadEncoder()
+    let payloadDecoder: PayloadDecoder
+    let payloadEncoder: PayloadEncoder
+    
+    init(
+        payloadDecoder: PayloadDecoder = PhoenixPayloadDecoder(),
+        payloadEncoder: PayloadEncoder = PhoenixPayloadEncoder()
+    ) {
+        self.payloadDecoder = payloadDecoder
+        self.payloadEncoder = payloadEncoder
+    }
     
     func parse(_ incomingMessage: IncomingMessage) -> Result<Any, any Error> {
         Result {

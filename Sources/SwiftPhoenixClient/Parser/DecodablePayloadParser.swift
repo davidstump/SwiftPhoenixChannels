@@ -8,12 +8,25 @@
 
 import Foundation
 
-struct DecodablePayloadParser<T: Codable>: PayloadParser {
+///
+/// `PayloadParser` that attempts to convert an `IncomingMessage`'s payload to
+/// a `Decodable` object.
+///
+struct DecodablePayloadParser<T: Decodable>: PayloadParser {
     
-    let payloadDecoder = PhoenixPayloadDecoder()
-
+    /// The Decoder used to decode the message into the `Type`.
+    let payloadDecoder: PayloadDecoder
+    
     /// The Type to decode to
     let type: T.Type
+    
+    init(
+        payloadDecoder: PayloadDecoder = PhoenixPayloadDecoder(),
+        type: T.Type
+    ) {
+        self.payloadDecoder = payloadDecoder
+        self.type = type
+    }
     
     func parse(_ incomingMessage: IncomingMessage) -> Result<T, any Error> {
         Result {
@@ -22,16 +35,17 @@ struct DecodablePayloadParser<T: Codable>: PayloadParser {
                 return try payloadDecoder.decode(type, from: payloadData)
                 
             case .deferred(let incomingMessageData):
-                let typedMessage = try payloadDecoder.decode(DecodablePayload<T>.self,
-                                                             from: incomingMessageData)
-                return typedMessage.payload
+                let decodablePayload = try payloadDecoder.decode(DecodablePayload<T>.self,
+                                                                 from: incomingMessageData)
+                return decodablePayload.payload
             }
         }
     }
 }
 
+/// An intermediate class to parse a `.deferred` payload into a Decodable
 struct DecodablePayload<T: Decodable>: Decodable {
-
+    
     let payload: T
     
     public init(from decoder: Decoder) throws {
@@ -51,6 +65,5 @@ struct DecodablePayload<T: Decodable>: Decodable {
 }
 
 struct DecodableReplyWrapper<T: Decodable>: Decodable {
-    let status: String
     let payload: T
 }

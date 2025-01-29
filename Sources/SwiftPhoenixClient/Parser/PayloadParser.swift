@@ -8,6 +8,9 @@
 
 import Foundation
 
+///
+/// Parses the payload of an `IncomingMessage` into the associated `PayloadType`
+///
 protocol PayloadParser<PayloadType> {
     associatedtype PayloadType
     

@@ -26,8 +26,7 @@ struct PartialMessage: Decodable {
     /// The reply status as a string
     let status: String?
     
-
-    public init(from decoder: any Decoder) throws {
+    init(from decoder: any Decoder) throws {
         var container = try decoder.unkeyedContainer()
         joinRef = try? container.decode(String?.self)
         ref = try? container.decode(String?.self)
@@ -41,7 +40,6 @@ struct PartialMessage: Decodable {
             status = nil
         }
     }
-
 }
 
 struct PartialReplyWrapper: Decodable {

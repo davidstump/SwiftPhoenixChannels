@@ -8,10 +8,21 @@
 
 import Foundation
 
+///
+/// `PayloadParser` that attempts to convert an `IncomingMessage`'s payload to `Data`
+///
 class DataPayloadParser: PayloadParser {
     
-    let payloadDecoder = PhoenixPayloadDecoder()
-    let payloadEncoder = PhoenixPayloadEncoder()
+    let payloadDecoder: PayloadDecoder
+    let payloadEncoder: PayloadEncoder
+    
+    init(
+        payloadDecoder: PayloadDecoder = PhoenixPayloadDecoder(),
+        payloadEncoder: PayloadEncoder = PhoenixPayloadEncoder()
+    ) {
+        self.payloadDecoder = payloadDecoder
+        self.payloadEncoder = payloadEncoder
+    }
     
     func parse(_ incomingMessage: IncomingMessage) -> Result<Data, any Error> {
         Result {
@@ -21,7 +32,7 @@ class DataPayloadParser: PayloadParser {
             case .deferred(let incomingMessageData):
                 let array = try payloadDecoder.decode(from: incomingMessageData) as! [Any]
                 let payloadJsonObject = array[4]
-             
+                
                 if incomingMessage.event == ChannelEvent.reply {
                     guard
                         let payload = payloadJsonObject as? [String: Any],
