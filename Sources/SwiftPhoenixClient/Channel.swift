@@ -552,7 +552,7 @@ public class Channel {
                  payload: Payload = [:],
                  status: String? = nil) {
         // Trigger here is internal and pretty safe to force unwrap.
-        let data = try! self.encoder.encode(payload)
+        let data = try! self.encoder.encode(any: payload)
         
         let message = IncomingMessage(
             joinRef: joinRef ?? self.joinRef,

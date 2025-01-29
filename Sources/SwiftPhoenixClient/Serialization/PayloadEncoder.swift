@@ -9,30 +9,53 @@
 import Foundation
 
 ///
-/// Provides methods for encoding Encodable and [String: Any]
-/// payloads into an outbound message.
+/// Encodes an `Encodable` or a generic `Any` JsonObject payload into `Data`
 ///
 public protocol PayloadEncoder {
     
+    /// Encodes an `Encodable` into `Data`
+    ///
+    /// - returns: The encoded `encodable` as `Data`
+    /// - throws: Any error caused during encoding
     func encode(_ encodable: Encodable) throws -> Data
     
-    func encode(_ dictionary: [String: Any]) throws -> Data
-    
+    /// Encodes a JSON `Any` into `Data`
+    ///
+    /// - returns: The encoded `Any` as `Data`
+    /// - throws: Any error caused during encoding
     func encode(any jsonObject: Any) throws -> Data
-    
     
 }
 
+///
+/// A default implementtion of `PayloadEncoder` which works out of the box with a
+/// standard Phoenix server.
+///
 public class PhoenixPayloadEncoder: PayloadEncoder {
-    public func encode(any jsonObject: Any) throws -> Data {
-            try JSONSerialization.data(withJSONObject: jsonObject, options: .fragmentsAllowed)
-        }
     
-    public func encode(_ encodable: any Encodable) throws -> Data {
-        return try JSONEncoder().encode(encodable)
+    /// The options for writing payloads as JSON data.
+    public let options: JSONSerialization.WritingOptions
+    
+    /// `JSONEncoder` used to encode payloads.
+    public let encoder: JSONEncoder
+
+    /// Creates an instance using the specified `WritingOptions` and `JsonEncoder`.
+    ///
+    /// - Parameter encoder: The `JSONEncoder`. `JSONEncoder()` by default.
+    /// - Parameter options: `JSONSerialization.WritingOptions` to use.
+    public init(
+        encoder: JSONEncoder = JSONEncoder(),
+        options: JSONSerialization.WritingOptions = [.fragmentsAllowed]
+    ) {
+        self.encoder = encoder
+        self.options = options
     }
     
-    public func encode(_ dictionary: [String : Any]) throws -> Data{
-        return try JSONSerialization.data(withJSONObject: dictionary)
+    public func encode(_ encodable: any Encodable) throws -> Data {
+        return try self.encoder.encode(encodable)
+    }
+    
+    public func encode(any jsonObject: Any) throws -> Data {
+        try JSONSerialization.data(withJSONObject: jsonObject, options: self.options)
     }
 }
