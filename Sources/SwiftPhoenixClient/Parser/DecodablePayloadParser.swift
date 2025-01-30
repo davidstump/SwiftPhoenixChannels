@@ -57,7 +57,7 @@ struct DecodablePayload<T: Decodable>: Decodable {
         
         if event == ChannelEvent.reply {
             let wrapper = try container.decode(DecodableReplyWrapper<T>.self)
-            payload = wrapper.payload
+            payload = wrapper.response
         } else {
             payload = try container.decode(T.self)
         }
@@ -65,5 +65,5 @@ struct DecodablePayload<T: Decodable>: Decodable {
 }
 
 struct DecodableReplyWrapper<T: Decodable>: Decodable {
-    let payload: T
+    let response: T
 }

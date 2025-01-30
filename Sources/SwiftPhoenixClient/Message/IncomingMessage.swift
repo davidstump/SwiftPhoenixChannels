@@ -42,7 +42,7 @@ public struct IncomingMessage {
     
     /// If determined, then the data is the payload from the serializer.
     /// If undetermined, then the payload must be parsed from the data
-    internal let payload: ReceivedPayload
+    internal let payload: IncomingPayload
     
     /// The raw text from the server if the message was sent as a String
     public let rawText: String?
@@ -51,7 +51,7 @@ public struct IncomingMessage {
     public let rawBinary: Data?
 }
 
-enum ReceivedPayload {
+enum IncomingPayload {
     /// The payload was fully accessible at the point of Serialization. The data
     /// excludes all other values, such as status, ref, topic, and only represents
     /// the payload from the Server.

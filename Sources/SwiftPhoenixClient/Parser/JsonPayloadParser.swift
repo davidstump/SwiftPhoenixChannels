@@ -39,7 +39,7 @@ class JsonPayloadParser: PayloadParser {
                         let payload = payloadJsonObject as? [String: Any],
                         let response = payload["response"]
                     else {
-                        let text = String(data: incomingMessageData, encoding: .utf8) ?? "unparsable"
+                        let text = incomingMessage.rawText ?? "n/a"
                         throw PhxError.serializerError(reason: .invalidReplyStructure(string: text))
                     }
                     return response

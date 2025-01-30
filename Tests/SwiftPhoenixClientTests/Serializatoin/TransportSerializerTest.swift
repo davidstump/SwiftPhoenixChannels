@@ -10,10 +10,6 @@ import Testing
 import XCTest
 @testable import SwiftPhoenixClient
 
-struct TestData: Codable {
-    let foo: Int
-}
-
 final class PhoenixTransportSerializerTest {
     
     private let serializer: TransportSerializer = PhoenixTransportSerializer()
