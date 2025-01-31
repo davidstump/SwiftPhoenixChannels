@@ -144,19 +144,21 @@ class BasicChatViewController: UIViewController {
             self?.addText("You joined the room.")
         }
         
-        channel.on("new:msg") { [weak self] message in
-            guard
-                let self,
-                let chat = try? JSONDecoder().decode(Chat.self, from: message.payload)
-            else {
-                return
-            }
+        channel.onDecodable("new:msg", of: Chat.self) { [weak self] message in
+            guard let self else { return }
             
-            let newMessage = "[\(chat.username)] \(chat.body)"
-            self.addText(newMessage)
+            switch message.payload {
+            case .success(let chat):
+                let newMessage = "[\(chat.username)] \(chat.body)"
+                self.addText(newMessage)
+                
+            case .failure(let error):
+                print("new:msg parse failure: ", error)
+            }
         }
         
         channel.on("user:entered") { [weak self] message in
+            print(message.payload)
             self?.addText("[anonymous entered]")
         }
         

@@ -150,21 +150,22 @@ class ChatRoomViewController: UIViewController {
         
         // Setup the Channel to receive and send messages
         let channel = socket.channel(topic, params: ["status": "joining"])
-        channel.on("shout") { [weak self] message in
-            guard let self else { return }
-
-            let shout = try? self.jsonDecoder.decode(Shout.self,
-                                                     from: message.payload)
-            
-            self.shouts.append(shout!)
-            
-            
-            DispatchQueue.main.async {
-                let indexPath = IndexPath(row: self.shouts.count - 1, section: 0)
-                self.tableView.reloadData() //reloadRows(at: [indexPath], with: .automatic)
-                self.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
+        channel.onDecodable("shout", of: Shout.self) { message in
+            switch message.payload {
+            case .success(let shout):
+                self.shouts.append(shout)
+                
+                DispatchQueue.main.async {
+                    let indexPath = IndexPath(row: self.shouts.count - 1, section: 0)
+                    self.tableView.reloadData() //reloadRows(at: [indexPath], with: .automatic)
+                    self.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
+                }
+                
+            case .failure(let error):
+                print("Error receiving message", error)
             }
         }
+        
         
         // Now connect the socSerket and join the channel
         self.lobbyChannel = channel
@@ -174,7 +175,8 @@ class ChatRoomViewController: UIViewController {
                 print("CHANNEL: rooms:lobby joined. status <\(message.status ?? "null")>")
             }
             .receive("error") { message in
-                print("CHANNEL: rooms:lobby failed to join. payload <\(message.payloadString ?? "null")>  status <\(message.status ?? "null")> ")
+                let payload = try! String(data: message.payload.get(), encoding: .utf8)
+                print("CHANNEL: rooms:lobby failed to join. payload <\(payload ?? "null")>  status <\(message.status ?? "null")> ")
             }
         
         self.socket.connect()

@@ -31,7 +31,7 @@ struct StateChangeCallbacks {
     let open: SynchronizedArray<(ref: String, callback: ((URLResponse?) -> Void))> = .init()
     let close: SynchronizedArray<(ref: String, callback: ((URLSessionWebSocketTask.CloseCode, String?) -> Void))> = .init()
     let error: SynchronizedArray<(ref: String, callback: ((Error, URLResponse?) -> Void))> = .init()
-    let message: SynchronizedArray<(ref: String, callback: ((Message) -> Void))> = .init()
+    let message: SynchronizedArray<(ref: String, callback: ((IncomingMessage) -> Void))> = .init()
 }
 
 
@@ -82,7 +82,7 @@ public class Socket: PhoenixTransportDelegate {
     public var vsn: String = Defaults.vsn
     
     /// Serializer used to encode/decode between the clienet and the server.
-    public var serializer: Serializer = PhoenixSerializer()
+    public var serializer: TransportSerializer = PhoenixTransportSerializer()
     
     /// Customize how payloads are encoded before being sent to the server
     public var encoder: PayloadEncoder = PhoenixPayloadEncoder()
@@ -389,7 +389,7 @@ public class Socket: PhoenixTransportDelegate {
     ///
     /// - parameter callback: Called when the Socket receives a message event
     @discardableResult
-    public func onMessage(callback: @escaping MessageHandler) -> String {
+    public func onMessage(callback: @escaping (IncomingMessage) -> Void) -> String {
         self.append(callback: callback, to: self.stateChangeCallbacks.message)
     }
     
@@ -464,32 +464,12 @@ public class Socket: PhoenixTransportDelegate {
     /// Sends data through the Socket. This method is internal. Instead, you
     /// should call `push(_:, payload:, timeout:)` on the Channel you are
     /// sending an event to.
-    ///
-    /// - parameter topic:
-    /// - parameter event:
-    /// - parameter payload:
-    /// - parameter ref: Optional. Defaults to nil
-    /// - parameter joinRef: Optional. Defaults to nil
-    internal func push(topic: String,
-                       event: String,
-                       payload: Data,
-                       ref: String? = nil,
-                       joinRef: String? = nil,
-                       asBinary: Bool = false) {
-        
+    internal func push(outgoing message: OutgoingMessage) {
         let callback: (() throws -> ()) = { [weak self] in
             guard let self else { return }
             
-            let message = Message.message(
-                joinRef: joinRef,
-                ref: ref,
-                topic: topic,
-                event: event,
-                payload: payload
-            )
-
-            if asBinary {
-                let binary = serializer.binaryEncode(message: message)
+            if message.isBinary {
+                let binary = try serializer.binaryEncode(message: message)
                 self.logItems("push", "Sending binary \(binary)" )
                 self.connection?.send(data: binary)
                 
@@ -506,7 +486,7 @@ public class Socket: PhoenixTransportDelegate {
         } else {
             /// If the socket is not connected, add the push to a buffer which will
             /// be sent immediately upon connection.
-            self.sendBuffer.append((ref: ref, callback: callback))
+            self.sendBuffer.append((ref: message.ref, callback: callback))
         }
     }
     
@@ -575,7 +555,7 @@ public class Socket: PhoenixTransportDelegate {
         self.stateChangeCallbacks.error.forEach({ $0.callback(error, response) })
     }
     
-    internal func onConnectionMessage(_ message: Message) {
+    internal func onConnectionMessage(_ message: IncomingMessage) {
         // Clear heartbeat ref, preventing a heartbeat timeout disconnect
         if message.ref == pendingHeartbeatRef { pendingHeartbeatRef = nil }
         
@@ -660,11 +640,9 @@ public class Socket: PhoenixTransportDelegate {
         }
         
         // The last heartbeat was acknowledged by the server. Send another one
-        self.pendingHeartbeatRef = self.makeRef()
-        self.push(topic: "phoenix",
-                  event: ChannelEvent.heartbeat,
-                  payload: Defaults.emptyPayload,
-                  ref: self.pendingHeartbeatRef)
+        let nextHeartbeatMessage = OutgoingMessage(heartbeatRef: self.makeRef())
+        self.pendingHeartbeatRef = nextHeartbeatMessage.ref
+        self.push(outgoing: nextHeartbeatMessage)
     }
     
     internal func abnormalClose(_ reason: String) {
@@ -698,23 +676,25 @@ public class Socket: PhoenixTransportDelegate {
     }
     
     public func onMessage(data: Data) {
-        guard let message = try? serializer.binaryDecode(data: data) else {
+        guard let decodedMessage = try? serializer.binaryDecode(data: data) else {
             self.logItems("receive: Unable to parse binary: \(data)")
             return
         }
-        
-        self.logItems("receive ", data)
-        DispatchQueue.main.async { self.onConnectionMessage(message) }
+
+        self.logItems("receive \(data.count) bytes")
+        DispatchQueue.main.async {
+            self.onConnectionMessage(decodedMessage)
+        }
     }
     
     public func onMessage(string: String) {
-        guard let message = try? serializer.decode(text: string) else {
+        guard let decodedMessage = try? serializer.decode(text: string) else {
             self.logItems("receive: Unable to parse JSON: \(string)")
             return
         }
         
         self.logItems("receive ", string)
-        DispatchQueue.main.async { self.onConnectionMessage(message) }
+        DispatchQueue.main.async { self.onConnectionMessage(decodedMessage) }
     }
 
     public func onClose(code: URLSessionWebSocketTask.CloseCode, reason: String? = nil) {

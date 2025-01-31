@@ -21,6 +21,10 @@
 
 import Foundation
 
+struct ReceiveHook {
+    let status: String
+    let callback: SubscriptionCallback
+}
 
 /// Represnts pushing data to a `Channel` through the `Socket`
 public class Push {
@@ -31,23 +35,26 @@ public class Push {
     /// The event, for example `phx_join`
     public let event: String
     
+    /// The topic of the channel that is performing the Push
+    public let topic: String
+    
     /// The payload, for example ["user_id": "abc123"], expressed as Data
-    public var payload: Data
+    public var payload: OutgoingPayload
     
     /// The push timeout. Default is 10.0 seconds
     public var timeout: TimeInterval
     
     /// The server's response to the Push
-    var receivedMessage: Message?
+    var receivedMessage: IncomingMessage?
     
     /// Timer which triggers a timeout event
     var timeoutTimer: TimerQueue
     
     /// WorkItem to be performed when the timeout timer fires
     var timeoutWorkItem: DispatchWorkItem?
-    
+        
     /// Hooks into a Push. Where .receive("ok", callback(Payload)) are stored
-    var receiveHooks: [String: [MessageHandler]]
+    var receiveHooks: SynchronizedArray<ReceiveHook>
     
     /// True if the Push has been sent
     var sent: Bool
@@ -58,10 +65,13 @@ public class Push {
     /// The event that is associated with the reference ID of the Push
     var refEvent: String?
     
-    /// Determines if the data payload should be pushed as a binary instead of a string
-    let asBinary: Bool
+    var decoder: PayloadDecoder {
+        return self.channel?.socket?.decoder ?? PhoenixPayloadDecoder()
+    }
     
-    
+    var encoder: PayloadEncoder {
+        return self.channel?.socket?.encoder ?? PhoenixPayloadEncoder()
+    }
     
     /// Initializes a Push
     ///
@@ -71,20 +81,19 @@ public class Push {
     /// - parameter timeout: Optional. The push timeout. Default is 10.0s
     init(channel: Channel,
          event: String,
-         payload: Data,
-         timeout: TimeInterval,
-         asBinary: Bool = false
+         payload: OutgoingPayload,
+         timeout: TimeInterval
     ) {
         self.channel = channel
         self.event = event
+        self.topic = channel.topic
         self.payload = payload
         self.timeout = timeout
         self.receivedMessage = nil
         self.timeoutTimer = TimerQueue.main
-        self.receiveHooks = [:]
+        self.receiveHooks = SynchronizedArray()
         self.sent = false
         self.ref = nil
-        self.asBinary = asBinary
     }
     
     
@@ -104,14 +113,16 @@ public class Push {
         
         self.startTimeout()
         self.sent = true
-        self.channel?.socket?.push(
-            topic: channel?.topic ?? "",
-            event: self.event,
-            payload: self.payload,
+        
+        let message = OutgoingMessage(
+            joinRef: self.channel?.joinRef,
             ref: self.ref,
-            joinRef: channel?.joinRef,
-            asBinary: self.asBinary
+            topic: self.topic,
+            event: self.event,
+            payload: self.payload
         )
+        
+        self.channel?.socket?.push(outgoing: message)
     }
     
     /// Receive a specific event when sending an Outbound message. Subscribing
@@ -129,25 +140,47 @@ public class Push {
     /// - parameter callback: Callback to fire when the status is recevied
     @discardableResult
     public func receive(_ status: String,
-                        callback: @escaping MessageHandler) -> Push {
+                        callback: @escaping (ChannelMessage<Any>) -> Void) -> Push {
+        let subscriptionCallback = JsonSubscriptionCallback(callback: callback)
+        return appendReceive(status, callback: subscriptionCallback)
+    }
+    
+    @discardableResult
+    public func receiveData(_ status: String,
+                            callback: @escaping (ChannelMessage<Data>) -> Void) -> Push {
+        let subscriptionCallback = DataSubscriptionCallback(callback: callback)
+        return appendReceive(status, callback: subscriptionCallback)
+    }
+    
+    @discardableResult
+    public func receiveDecodable<T: Codable>(_ status: String,
+                                             of type: T.Type,
+                                             callback: @escaping (ChannelMessage<T>) -> Void) -> Push {
+        let subscriptionCallback = DecodableSubscriptionCallback(type: type, callback: callback)
+        return appendReceive(status, callback: subscriptionCallback)
+    }
+    
+    @discardableResult
+    func _receive(_ status: String,
+                         callback: @escaping (IncomingMessage) -> Void) -> Push {
+        let subscriptionCallback = InternalSubscriptionCallback(callback: callback)
+        return appendReceive(status, callback: subscriptionCallback)
+    }
+    
+    private func appendReceive(_ status: String, callback: SubscriptionCallback) -> Self {
+        let hook = ReceiveHook(status: status, callback: callback)
         
         // If the message has already been received, pass it to the callback immediately
         if hasReceived(status: status), let receivedMessage = self.receivedMessage {
-            callback(receivedMessage)
+            hook.callback.trigger(receivedMessage,
+                                  payloadDecoder: self.decoder,
+                                  payloadEncoder: self.encoder)
         }
         
-        if receiveHooks[status] == nil {
-            /// Create a new array of hooks if no previous hook is associated with status
-            receiveHooks[status] = [callback]
-        } else {
-            /// A previous hook for this status already exists. Just append the new hook
-            receiveHooks[status]?.append(callback)
-        }
+        self.receiveHooks.append(hook)
         
         return self
     }
-    
-    
     
     /// Resets the Push as it was after it was first tnitialized.
     internal func reset() {
@@ -163,8 +196,14 @@ public class Push {
     ///
     /// - parameter status: Status which was received, e.g. "ok", "error", "timeout"
     /// - parameter response: Response that was received
-    private func matchReceive(_ status: String, message: Message) {
-        receiveHooks[status]?.forEach { $0(message) } 
+    private func matchReceive(_ status: String, message: IncomingMessage) {
+        self.receiveHooks.forEach { hook in
+            if hook.status == status {
+                hook.callback.trigger(message,
+                                      payloadDecoder: self.decoder,
+                                      payloadEncoder: self.encoder)
+            }
+        }
     }
     
     /// Reverses the result on channel.on(ChannelEvent, callback) that spawned the Push
@@ -199,17 +238,18 @@ public class Push {
         
         /// If a response is received  before the Timer triggers, cancel timer
         /// and match the recevied event to it's corresponding hook
-        channel.on(refEvent) { [weak self] message in
+        channel._on(refEvent) { [weak self] incomingMessage in
             guard let self else { return }
-
+            
             self.cancelRefEvent()
             self.cancelTimeout()
-            self.receivedMessage = message
+            self.receivedMessage = incomingMessage
             
             /// Check if there is event a status available
-            guard let status = message.status else { return }
-            self.matchReceive(status, message: message)
+            guard let status = incomingMessage.status else { return }
+            self.matchReceive(status, message: incomingMessage)
         }
+
         
         /// Setup and start the Timeout timer.
         let workItem = DispatchWorkItem {
@@ -233,8 +273,6 @@ public class Push {
         /// If there is no ref event, then there is nothing to trigger on the channel
         guard let refEvent = self.refEvent else { return }
         
-//        var mutPayload = payload
-//        mutPayload["status"] = status
         self.channel?.trigger(
             event: refEvent,
             payload: payload,

@@ -21,22 +21,6 @@
 import Swift
 import Foundation
 
-public typealias MessageHandler = (Message) -> Void
-
-/// Container class of bindings to the channel
-struct Binding {
-    
-    /// The event that the Binding is bound to
-    let event: String
-    
-    /// The reference number of the Binding
-    let ref: Int
-    
-    /// The callback to be triggered
-    let callback: MessageHandler
-}
-
-
 ///
 /// Represents a Channel which is bound to a topic
 ///
@@ -67,20 +51,25 @@ public class Channel {
     
     /// The params sent when joining the channel
     public var params: Payload {
-        didSet {
-            let data = try! self.socket?.encoder.encode(params)
-            self.joinPush.payload = data!
-        }
+        didSet { self.joinPush.payload = .json(params) }
     }
     
     /// The Socket that the channel belongs to
     weak var socket: Socket?
     
+    var decoder: PayloadDecoder {
+        return self.socket?.decoder ?? PhoenixPayloadDecoder()
+    }
+    
+    var encoder: PayloadEncoder {
+        return self.socket?.encoder ?? PhoenixPayloadEncoder()
+    }
+    
     /// Current state of the Channel
     var state: ChannelState
     
-    /// Collection of event bindings
-    let syncBindingsDel: SynchronizedArray<Binding>
+    /// Collection of subscriptions on the Channel
+    let subscriptions: SynchronizedArray<ChannelSubscription>
     
     /// Tracks event binding ref counters
     var bindingRef: Int
@@ -117,7 +106,7 @@ public class Channel {
         self.topic = topic
         self.params = params
         self.socket = socket
-        self.syncBindingsDel = SynchronizedArray()
+        self.subscriptions = SynchronizedArray()
         self.bindingRef = 0
         self.timeout = socket.timeout
         self.joinedOnce = false
@@ -154,12 +143,10 @@ public class Channel {
         
         if let ref = onOpenRef { self.stateChangeRefs.append(ref) }
         
-        
         // Setup Push Event to be sent when joining
-        let data = try! self.socket?.encoder.encode(params)
         self.joinPush = Push(channel: self,
                              event: ChannelEvent.join,
-                             payload: data!,
+                             payload: .json(params),
                              timeout: self.timeout)
         
         /// Handle when a response is received after join()
@@ -196,7 +183,7 @@ public class Channel {
             // Send a Push to the server to leave the channel
             let leavePush = Push(channel: self,
                                  event: ChannelEvent.leave,
-                                 payload: Defaults.emptyPayload,
+                                 payload: .json([:]),
                                  timeout: self.timeout)
             leavePush.send()
             
@@ -247,22 +234,16 @@ public class Channel {
         }
         
         // Perform when the join reply is received
-        self.on(ChannelEvent.reply) { [weak self] message in
+        self._on(ChannelEvent.reply) { [weak self] message in
             guard let self else { return }
             
             // Trigger bindings
             guard let ref = message.ref else { return }
+            var replyEventMessage = message
+            replyEventMessage.event = self.replyEventName(ref)
             
-            let message = Message(
-                joinRef: message.joinRef,
-                ref: message.ref,
-                topic: self.topic,
-                event: self.replyEventName(ref),
-                payload: message.payload,
-                status: message.status
-            )
+            self.trigger(replyEventMessage)
             
-            self.trigger(message)
         }
     }
     
@@ -275,7 +256,7 @@ public class Channel {
     ///
     /// - parameter msg: The Message received by the client from the server
     /// - return: Must return the message, modified or unmodified
-    public var onMessage: (_ message: Message) -> Message = { (message) in
+    public var onMessage: (_ message: IncomingMessage) -> IncomingMessage = { message in
         return message
     }
     
@@ -297,70 +278,17 @@ public class Channel {
         self.rejoin()
         return joinPush
     }
+
     
-    
-    /// Hook into when the Channel is closed.
-    ///
-    /// Example:
-    ///
-    ///     let channel = socket.channel("topic")
-    ///     channel.onClose() { [weak self] message in
-    ///         self?.print("Channel \(message.topic) has closed"
-    ///     }
-    ///
-    /// - parameter callback: Called when the Channel closes
-    /// - return: Ref counter of the subscription. See `func off()`
     @discardableResult
-    public func onClose(_ callback: @escaping MessageHandler) -> Int {
-        return self.on(ChannelEvent.close, callback: callback)
-    }
-    
-    /// Hook into when the Channel receives an Error.
-    ///
-    /// Example:
-    ///
-    ///     let channel = socket.channel("topic")
-    ///     channel.onError() { [weak self] (message) in
-    ///         self?.print("Channel \(message.topic) has errored"
-    ///     }
-    ///
-    /// - parameter callback: Called when the Channel closes
-    /// - return: Ref counter of the subscription. See `func off()`
-    @discardableResult
-    public func onError(_ callback: @escaping MessageHandler) -> Int {
-        return self.on(ChannelEvent.error, callback: callback)
-    }
-    
-    /// Subscribes on channel events.
-    ///
-    /// Subscription returns a ref counter, which can be used later to
-    /// unsubscribe the exact event listener
-    ///
-    /// Example:
-    ///
-    ///     let channel = socket.channel("topic")
-    ///     let ref1 = channel.on("event") { [weak self] (message) in
-    ///         self?.print("do stuff")
-    ///     }
-    ///     let ref2 = channel.on("event") { [weak self] (message) in
-    ///         self?.print("do other stuff")
-    ///     }
-    ///     channel.off("event", ref1)
-    ///
-    /// Since unsubscription of ref1, "do stuff" won't print, but "do other
-    /// stuff" will keep on printing on the "event"
-    ///
-    /// - parameter event: Event to receive
-    /// - parameter callback: Called with the event's message
-    /// - return: Ref counter of the subscription. See `func off()`
-    @discardableResult
-    public func on(_ event: String, callback: @escaping MessageHandler) -> Int {
+    internal func _on(_ event: String, callback: @escaping (IncomingMessage) -> Void) -> Int {
         let ref = bindingRef
         self.bindingRef = ref + 1
         
-        self.syncBindingsDel.append(Binding(event: event, ref: ref, callback: callback))
+        let subscription = ChannelSubscription(event: event, ref: ref, callback: callback)
+        self.subscriptions.append(subscription)
         
-        return ref
+        return subscription.ref
     }
     
     /// Unsubscribes from a channel event. If a `ref` is given, only the exact
@@ -383,10 +311,12 @@ public class Channel {
     /// - parameter event: Event to unsubscribe from
     /// - paramter ref: Ref counter returned when subscribing. Can be omitted
     public func off(_ event: String, ref: Int? = nil) {
-        self.syncBindingsDel.removeAll { (bind) -> Bool in
-            bind.event == event && (ref == nil || ref == bind.ref)
+        self.subscriptions.removeAll { (subcription) -> Bool in
+            subcription.event == event && (ref == nil || ref == subcription.ref)
         }
     }
+    
+    
     
     /// Push a payload to the Channel
     ///
@@ -403,14 +333,13 @@ public class Channel {
     public func push(_ event: String,
                      payload: Payload,
                      timeout: TimeInterval = Defaults.timeoutInterval) -> Push {
-        guard joinedOnce else { fatalError("Tried to push \(event) to \(self.topic) before joining. Use channel.join() before pushing events") }
-        guard let payload = try? self.socket?.encoder.encode(payload) else {
-            fatalError("Tried to push \(payload) to \(self.topic) but could not encode.")
+        guard joinedOnce else {
+            fatalError("Tried to push \(event) to \(self.topic) before joining. Use channel.join() before pushing events")
         }
         
         let pushEvent = Push(channel: self,
                              event: event,
-                             payload: payload,
+                             payload: .json(payload),
                              timeout: timeout)
         if canPush {
             pushEvent.send()
@@ -440,9 +369,8 @@ public class Channel {
         
         let pushEvent = Push(channel: self,
                              event: event,
-                             payload: payload,
-                             timeout: timeout,
-                             asBinary: true)
+                             payload: .binary(payload),
+                             timeout: timeout)
         if canPush {
             pushEvent.send()
         } else {
@@ -477,7 +405,7 @@ public class Channel {
         // Now set the state to leaving
         self.state = .leaving
         
-        let closeHandler: MessageHandler = { [weak self] message in
+        let closeHandler: (IncomingMessage) -> Void = { [weak self] message in
             guard let self else { return }
             
             self.socket?.logItems("channel", "leave \(self.topic)")
@@ -489,14 +417,14 @@ public class Channel {
         // Push event to send to the server
         let leavePush = Push(channel: self,
                              event: ChannelEvent.leave,
-                             payload: Defaults.emptyPayload,
+                             payload: .json([:]),
                              timeout: timeout)
         
         // Perform the same behavior if successfully left the channel
         // or if sending the event timed out
         leavePush
-            .receive("ok", callback: closeHandler)
-            .receive("timeout", callback: closeHandler)
+            ._receive("ok", callback: closeHandler)
+            ._receive("timeout", callback: closeHandler)
         leavePush.send()
         
         // If the Channel cannot send push events, trigger a success locally
@@ -513,7 +441,7 @@ public class Channel {
     /// - parameter payload: The payload for the message
     /// - parameter ref: The reference of the message
     /// - return: Must return the payload, modified or unmodified
-    public func onMessage(callback: @escaping (Message) -> Message) {
+    public func onMessage(callback: @escaping (IncomingMessage) -> IncomingMessage) {
         self.onMessage = callback
     }
     
@@ -522,7 +450,7 @@ public class Channel {
     // MARK: - Internal
     //----------------------------------------------------------------------
     /// Checks if an event received by the Socket belongs to this Channel
-    func isMember(_ message: Message) -> Bool {
+    func isMember(_ message: IncomingMessage) -> Bool {
         // Return false if the message's topic does not match the Channel's topic
         guard message.topic == self.topic else { return false }
         
@@ -532,7 +460,7 @@ public class Channel {
             ChannelEvent.isLifecyleEvent(message.event)
         else { return true }
         
-        self.socket?.logItems("channel", "dropping outdated message", message.topic, message.event, message.payloadString ?? "null", safeJoinRef)
+        self.socket?.logItems("channel", "dropping outdated message", message.topic, message.event, message.rawText ?? "n/a", safeJoinRef)
         return false
     }
     
@@ -555,20 +483,6 @@ public class Channel {
     }
     
     /// Triggers an event to the correct event bindings created by
-    /// `channel.on("event")`.
-    ///
-    /// - parameter message: Message to pass to the event bindings
-    func trigger(_ message: Message) {
-        let handledMessage = self.onMessage(message)
-        
-        self.syncBindingsDel.forEach { binding in
-            if binding.event == message.event {
-                binding.callback(handledMessage)
-            }
-        }
-    }
-    
-    /// Triggers an event to the correct event bindings created by
     //// `channel.on("event")`.
     ///
     /// - parameter event: Event to trigger
@@ -577,38 +491,39 @@ public class Channel {
     /// - parameter joinRef: Ref of the join event. Defaults to nil
     func trigger(event: String,
                  payload: Payload = [:],
-                 ref: String = "",
-                 joinRef: String? = nil,
                  status: String? = nil) {
-        let encoder = PhoenixPayloadEncoder()
-        let data = try? encoder.encode(payload)
+        // Trigger here is internal and pretty safe to force unwrap.
+        let data = try! self.encoder.encode(any: payload)
         
-        self.trigger(
-            event: event,
-            payload: data!,
-            ref: ref,
-            joinRef: joinRef,
-            status: status
-        )
-    }
-    
-    func trigger(event: String,
-                 payload: Data,
-                 ref: String?,
-                 joinRef: String? = nil,
-                 status: String? = nil) {
-        let message = Message(
+        let message = IncomingMessage(
             joinRef: joinRef ?? self.joinRef,
-            ref: ref,
+            ref: nil,
             topic: self.topic,
             event: event,
-            payload: payload,
-            status: status
+            status: status,
+            payload: .decided(data),
+            rawText: String(data: data, encoding: .utf8),
+            rawBinary: nil
         )
         
         self.trigger(message)
     }
     
+    /// Triggers an event to the correct event bindings created by
+    /// `channel.on("event")`.
+    ///
+    /// - parameter message: Message to pass to the event bindings
+    func trigger(_ incomingMessage: IncomingMessage) {
+        let handledMessage = self.onMessage(incomingMessage)
+        
+        self.subscriptions.forEach { subscription in
+            if subscription.event == incomingMessage.event {
+                subscription.trigger(handledMessage,
+                                     payloadDecoder: self.decoder,
+                                     payloadEncoder: self.encoder)
+            }
+        }
+    }
     
     /// - parameter ref: The ref of the event push
     /// - return: The event name of the reply
