@@ -9,6 +9,7 @@
 import Foundation
 
 /// Represents the final shape to be encoded into a string before being sent to the Server
+/// when the payload being sent is an Encodable, not Data or Json.
 internal struct OutgoingShape: Encodable {
     
     let joinRef: String?

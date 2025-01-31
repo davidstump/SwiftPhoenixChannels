@@ -680,24 +680,8 @@ public class Socket: PhoenixTransportDelegate {
             self.logItems("receive: Unable to parse binary: \(data)")
             return
         }
-//        
-//        let data = switch decodedMessage.payload {
-//        case .determined(let data):
-//            data
-//        case .undetermined(let data):
-//            data
-//        }
-//        
-//        // TODO: Payload here could be undetermined. Need to move this to trigger
-//        let message = Message(
-//            joinRef: decodedMessage.joinRef,
-//            ref: decodedMessage.ref,
-//            topic: decodedMessage.topic,
-//            event: decodedMessage.event,
-//            payload: data,
-//            status: decodedMessage.status)
-        
-        self.logItems("receive ", data)
+
+        self.logItems("receive \(data.count) bytes")
         DispatchQueue.main.async {
             self.onConnectionMessage(decodedMessage)
         }
@@ -708,22 +692,6 @@ public class Socket: PhoenixTransportDelegate {
             self.logItems("receive: Unable to parse JSON: \(string)")
             return
         }
-//        
-//        let data = switch decodedMessage.payload {
-//        case .determined(let data):
-//            data
-//        case .undetermined(let data):
-//            data
-//        }
-//        
-//        // TODO: Payload here could be undetermined. Need to move this to trigger
-//        let message = Message(
-//            joinRef: decodedMessage.joinRef,
-//            ref: decodedMessage.ref,
-//            topic: decodedMessage.topic,
-//            event: decodedMessage.event,
-//            payload: data,
-//            status: decodedMessage.status)
         
         self.logItems("receive ", string)
         DispatchQueue.main.async { self.onConnectionMessage(decodedMessage) }

@@ -48,7 +48,7 @@ struct DecodablePayload<T: Decodable>: Decodable {
         let _ = try? container.decode(String?.self) /*joinRef*/
         let _ = try? container.decode(String?.self) /*ref*/
         let _ = try container.decode(String.self) /*topic*/
-        let event = try container.decode(String.self) /*event*/
+        let event = try container.decode(String.self)
         
         if event == ChannelEvent.reply {
             let wrapper = try container.decode(DecodableReplyWrapper<T>.self)

@@ -291,10 +291,6 @@ public class Channel {
         return subscription.ref
     }
     
-    func off(_ subscription: ChannelSubscription) {
-        self.off(subscription.event, ref: subscription.ref)
-    }
-    
     /// Unsubscribes from a channel event. If a `ref` is given, only the exact
     /// listener will be removed. Else all listeners for the `event` will be
     /// removed.
@@ -427,8 +423,8 @@ public class Channel {
         // Perform the same behavior if successfully left the channel
         // or if sending the event timed out
         leavePush
-            .internalReceive("ok", callback: closeHandler)
-            .internalReceive("timeout", callback: closeHandler)
+            ._receive("ok", callback: closeHandler)
+            ._receive("timeout", callback: closeHandler)
         leavePush.send()
         
         // If the Channel cannot send push events, trigger a success locally
@@ -464,7 +460,7 @@ public class Channel {
             ChannelEvent.isLifecyleEvent(message.event)
         else { return true }
         
-        self.socket?.logItems("channel", "dropping outdated message", message.topic, message.event, safeJoinRef)
+        self.socket?.logItems("channel", "dropping outdated message", message.topic, message.event, message.rawText ?? "n/a", safeJoinRef)
         return false
     }
     

@@ -140,16 +140,16 @@ public class Push {
     /// - parameter callback: Callback to fire when the status is recevied
     @discardableResult
     public func receive(_ status: String,
-                        callback: @escaping (ChannelMessage<Data>) -> Void) -> Push {
-        let subscriptionCallback = DataSubscriptionCallback(callback: callback)
-        return _receive(status, callback: subscriptionCallback)
+                        callback: @escaping (ChannelMessage<Any>) -> Void) -> Push {
+        let subscriptionCallback = JsonSubscriptionCallback(callback: callback)
+        return appendReceive(status, callback: subscriptionCallback)
     }
     
     @discardableResult
-    public func receiveJson(_ status: String,
-                            callback: @escaping (ChannelMessage<Any>) -> Void) -> Push {
-        let subscriptionCallback = JsonSubscriptionCallback(callback: callback)
-        return _receive(status, callback: subscriptionCallback)
+    public func receiveData(_ status: String,
+                            callback: @escaping (ChannelMessage<Data>) -> Void) -> Push {
+        let subscriptionCallback = DataSubscriptionCallback(callback: callback)
+        return appendReceive(status, callback: subscriptionCallback)
     }
     
     @discardableResult
@@ -157,17 +157,17 @@ public class Push {
                                              of type: T.Type,
                                              callback: @escaping (ChannelMessage<T>) -> Void) -> Push {
         let subscriptionCallback = DecodableSubscriptionCallback(type: type, callback: callback)
-        return _receive(status, callback: subscriptionCallback)
+        return appendReceive(status, callback: subscriptionCallback)
     }
     
     @discardableResult
-    func internalReceive(_ status: String,
+    func _receive(_ status: String,
                          callback: @escaping (IncomingMessage) -> Void) -> Push {
         let subscriptionCallback = InternalSubscriptionCallback(callback: callback)
-        return _receive(status, callback: subscriptionCallback)
+        return appendReceive(status, callback: subscriptionCallback)
     }
     
-    func _receive(_ status: String, callback: SubscriptionCallback) -> Self {
+    private func appendReceive(_ status: String, callback: SubscriptionCallback) -> Self {
         let hook = ReceiveHook(status: status, callback: callback)
         
         // If the message has already been received, pass it to the callback immediately

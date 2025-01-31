@@ -8,22 +8,16 @@
 
 import Foundation
 
+///
+/// Allows us to decode all but the payload from incoming raw text messages
+/// and defer decoding the payload until later.
+/// 
 struct PartialMessage: Decodable {
     
-    /// The unique string ref when joining
     let joinRef: String?
-    
-    /// The unique string ref
     let ref: String?
-    
-    /// The string topic or topic:subtopic pair namespace, for example
-    /// "messages", "messages:123"
     let topic: String
-    
-    /// The string event name, for example "phx_join"
     let event: String
-    
-    /// The reply status as a string
     let status: String?
     
     init(from decoder: any Decoder) throws {

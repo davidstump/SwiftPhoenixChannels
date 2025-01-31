@@ -8,8 +8,6 @@
 
 import Foundation
 
-import Foundation
-
 ///
 /// Defines a message that originates from the client and is being sent to the Server.
 ///

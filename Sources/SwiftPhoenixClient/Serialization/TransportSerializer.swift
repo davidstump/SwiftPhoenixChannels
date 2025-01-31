@@ -174,37 +174,30 @@ public class PhoenixTransportSerializer: TransportSerializer {
                 throw PhxError.serializerError(reason: .invalidReplyStructure(string: text))
             }
             
-            return IncomingMessage(
+            return buildIncomingMessage(
                 joinRef: joinRef,
                 ref: ref,
                 topic: topic,
                 event: ChannelEvent.reply,
                 status: status,
                 payload: .deferred(jsonData),
-                rawText: text,
-                rawBinary: nil
+                rawText: text
             )
         } else if joinRef != nil || ref != nil {
-            return IncomingMessage(
+            return buildIncomingMessage(
                 joinRef: joinRef,
                 ref: ref,
                 topic: topic,
                 event: event,
-                status: nil,
                 payload: .deferred(jsonData),
-                rawText: text,
-                rawBinary: nil
+                rawText: text
             )
         } else {
-            return IncomingMessage(
-                joinRef: nil,
-                ref: nil,
+            return buildIncomingMessage(
                 topic: topic,
                 event: event,
-                status: nil,
                 payload: .deferred(jsonData),
-                rawText: text,
-                rawBinary: nil
+                rawText: text
             )
         }
     }
@@ -242,14 +235,11 @@ public class PhoenixTransportSerializer: TransportSerializer {
         offset += eventSize
         let data = Data(buffer[offset ..< buffer.count])
         
-        return IncomingMessage(
+        return buildIncomingMessage(
             joinRef: joinRef,
-            ref: nil,
             topic: topic,
             event: event,
-            status: nil,
             payload: .decided(data),
-            rawText: nil,
             rawBinary: rawData
         )
     }
@@ -276,14 +266,13 @@ public class PhoenixTransportSerializer: TransportSerializer {
         let data = Data(buffer[offset ..< buffer.count])
         
         // for binary messages, payload = {status: event, response: data}
-        return IncomingMessage(
+        return buildIncomingMessage(
             joinRef: joinRef,
             ref: ref,
             topic: topic,
             event: ChannelEvent.reply,
             status: event,
             payload: .decided(data),
-            rawText: nil,
             rawBinary: rawData
         )
     }
@@ -303,15 +292,33 @@ public class PhoenixTransportSerializer: TransportSerializer {
         offset += eventSize
         let data = Data(buffer[offset ..< buffer.count])
         
-        return IncomingMessage(
-            joinRef: nil,
-            ref: nil,
+        return buildIncomingMessage(
             topic: topic,
             event: event,
-            status: nil,
             payload: .decided(data),
-            rawText: nil,
             rawBinary: rawData
         )
     }
+    
+    private func buildIncomingMessage(
+        joinRef: String? = nil,
+        ref: String? = nil,
+        topic: String,
+        event: String,
+        status: String? = nil,
+        payload: IncomingPayload,
+        rawText: String? = nil,
+        rawBinary: Data? = nil
+    ) -> IncomingMessage {
+        return IncomingMessage(
+            joinRef: joinRef,
+            ref: ref,
+            topic: topic,
+            event: event,
+            status: status,
+            payload: payload,
+            rawText: rawText,
+            rawBinary: rawBinary)
+    }
+    
 }
