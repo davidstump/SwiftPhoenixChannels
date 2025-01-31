@@ -140,11 +140,11 @@ class BasicChatViewController: UIViewController {
         let channel = socket.channel(topic, params: ["status":"joining"])
         
 
-        channel.on("join").message { [weak self] _ in
+        channel.on("join") { [weak self] _ in
             self?.addText("You joined the room.")
         }
         
-        channel.on("new:msg").messageDecodable(of: Chat.self, { [weak self] message in
+        channel.onDecodable("new:msg", of: Chat.self) { [weak self] message in
             guard let self else { return }
             
             switch message.payload {
@@ -155,9 +155,9 @@ class BasicChatViewController: UIViewController {
             case .failure(let error):
                 print("new:msg parse failure: ", error)
             }
-        })
+        }
         
-        channel.on("user:entered").message { [weak self] message in
+        channel.on("user:entered") { [weak self] message in
             print(message.payload)
             self?.addText("[anonymous entered]")
         }

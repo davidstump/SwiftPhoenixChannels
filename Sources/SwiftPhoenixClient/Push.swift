@@ -172,7 +172,9 @@ public class Push {
         
         // If the message has already been received, pass it to the callback immediately
         if hasReceived(status: status), let receivedMessage = self.receivedMessage {
-            hook.callback.trigger(receivedMessage)
+            hook.callback.trigger(receivedMessage,
+                                  payloadDecoder: self.decoder,
+                                  payloadEncoder: self.encoder)
         }
         
         self.receiveHooks.append(hook)
@@ -197,7 +199,9 @@ public class Push {
     private func matchReceive(_ status: String, message: IncomingMessage) {
         self.receiveHooks.forEach { hook in
             if hook.status == status {
-                hook.callback.trigger(message)
+                hook.callback.trigger(message,
+                                      payloadDecoder: self.decoder,
+                                      payloadEncoder: self.encoder)
             }
         }
     }
@@ -234,7 +238,7 @@ public class Push {
         
         /// If a response is received  before the Timer triggers, cancel timer
         /// and match the recevied event to it's corresponding hook
-        channel.on(refEvent)._message { [weak self] incomingMessage in
+        channel._on(refEvent) { [weak self] incomingMessage in
             guard let self else { return }
             
             self.cancelRefEvent()

@@ -12,13 +12,17 @@ import Testing
 
 final class JsonPayloadParserTest {
     
+    let encoder = PhoenixPayloadEncoder()
+    let decoder = PhoenixPayloadDecoder()
     private let parser = JsonPayloadParser()
     
     @Test func test_parse_decided_data() throws {
         // ["foo": 1]
         let expectedPayload: Data = Data([0x7B, 0x22, 0x66, 0x6f, 0x6f, 0x22, 0x3A, 0x31, 0x7D])
         let message = buildIncomingMessage(payload: .decided(expectedPayload))
-        let result = self.parser.parse(message)
+        let result = self.parser.parse(message,
+                                       payloadDecoder: self.decoder,
+                                       payloadEncoder: self.encoder)
         
         if case .success(let success) = result {
             let actual = success as! [String: Any]
@@ -37,7 +41,9 @@ final class JsonPayloadParserTest {
             event: "phx_reply",
             payload: .deferred(incomingMessageData)
         )
-        let result = self.parser.parse(message)
+        let result = self.parser.parse(message,
+                                       payloadDecoder: self.decoder,
+                                       payloadEncoder: self.encoder)
         
         if case .success(let success) = result {
             let actual = success as! [String: Any]
@@ -53,7 +59,9 @@ final class JsonPayloadParserTest {
         """.data(using: .utf8)!
         
         let message = buildIncomingMessage(payload: .deferred(incomingMessageData))
-        let result = self.parser.parse(message)
+        let result = self.parser.parse(message,
+                                       payloadDecoder: self.decoder,
+                                       payloadEncoder: self.encoder)
         
         if case .success(let success) = result {
             let actual = success as! [String: Any]

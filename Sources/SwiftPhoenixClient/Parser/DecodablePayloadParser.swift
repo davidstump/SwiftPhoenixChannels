@@ -14,21 +14,16 @@ import Foundation
 ///
 struct DecodablePayloadParser<T: Decodable>: PayloadParser {
     
-    /// The Decoder used to decode the message into the `Type`.
-    let payloadDecoder: PayloadDecoder
-    
     /// The Type to decode to
     let type: T.Type
     
-    init(
-        payloadDecoder: PayloadDecoder = PhoenixPayloadDecoder(),
-        type: T.Type
-    ) {
-        self.payloadDecoder = payloadDecoder
+    init(type: T.Type) {
         self.type = type
     }
     
-    func parse(_ incomingMessage: IncomingMessage) -> Result<T, any Error> {
+    func parse(_ incomingMessage: IncomingMessage,
+               payloadDecoder: PayloadDecoder,
+               payloadEncoder: PayloadEncoder) -> Result<T, any Error> {
         Result {
             switch incomingMessage.payload {
             case .decided(let payloadData):

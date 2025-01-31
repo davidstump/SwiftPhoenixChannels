@@ -74,8 +74,6 @@ final class PhoenixTransportSerializerTest {
                 default:
                     return false
                 }
-            default:
-                return false
             }
         }
     }

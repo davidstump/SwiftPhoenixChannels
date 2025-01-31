@@ -234,7 +234,7 @@ public class Channel {
         }
         
         // Perform when the join reply is received
-        self.on(ChannelEvent.reply)._message { [weak self] message in
+        self._on(ChannelEvent.reply) { [weak self] message in
             guard let self else { return }
             
             // Trigger bindings
@@ -278,75 +278,20 @@ public class Channel {
         self.rejoin()
         return joinPush
     }
+
     
-    
-    /// Hook into when the Channel is closed.
-    ///
-    /// Example:
-    ///
-    ///     let channel = socket.channel("topic")
-    ///     channel.onClose() { [weak self] message in
-    ///         self?.print("Channel \(message.topic) has closed"
-    ///     }
-    ///
-    /// - parameter callback: Called when the Channel closes
-    /// - return: Ref counter of the subscription. See `func off()`
     @discardableResult
-    public func onClose(_ callback: @escaping (ChannelMessage<Data>) -> Void) -> ChannelSubscription {
-        return self.on(ChannelEvent.close).message(callback)
-    }
-    
-    /// Hook into when the Channel receives an Error.
-    ///
-    /// Example:
-    ///
-    ///     let channel = socket.channel("topic")
-    ///     channel.onError() { [weak self] (message) in
-    ///         self?.print("Channel \(message.topic) has errored"
-    ///     }
-    ///
-    /// - parameter callback: Called when the Channel closes
-    /// - return: Ref counter of the subscription. See `func off()`
-    @discardableResult
-    public func onError(_ callback: @escaping (ChannelMessage<Data>) -> Void) -> ChannelSubscription {
-        return self.on(ChannelEvent.error).message(callback)
-    }
-    
-    /// Subscribes on channel events.
-    ///
-    /// Subscription returns a ref counter, which can be used later to
-    /// unsubscribe the exact event listener
-    ///
-    /// Example:
-    ///
-    ///     let channel = socket.channel("topic")
-    ///     let ref1 = channel.on("event") { [weak self] (message) in
-    ///         self?.print("do stuff")
-    ///     }
-    ///     let ref2 = channel.on("event") { [weak self] (message) in
-    ///         self?.print("do other stuff")
-    ///     }
-    ///     channel.off("event", ref1)
-    ///
-    /// Since unsubscription of ref1, "do stuff" won't print, but "do other
-    /// stuff" will keep on printing on the "event"
-    ///
-    /// - parameter event: Event to receive
-    /// - parameter callback: Called with the event's message
-    /// - return: Ref counter of the subscription. See `func off()`
-    @discardableResult
-    public func on(_ event: String) -> ChannelSubscription {
+    internal func _on(_ event: String, callback: @escaping (IncomingMessage) -> Void) -> Int {
         let ref = bindingRef
         self.bindingRef = ref + 1
         
-        let subscription = ChannelSubscription(event: event, ref: ref)
+        let subscription = ChannelSubscription(event: event, ref: ref, callback: callback)
         self.subscriptions.append(subscription)
         
-        return subscription
+        return subscription.ref
     }
     
-    
-    public func off(_ subscription: ChannelSubscription) {
+    func off(_ subscription: ChannelSubscription) {
         self.off(subscription.event, ref: subscription.ref)
     }
     
@@ -577,7 +522,9 @@ public class Channel {
         
         self.subscriptions.forEach { subscription in
             if subscription.event == incomingMessage.event {
-                subscription.trigger(handledMessage)
+                subscription.trigger(handledMessage,
+                                     payloadDecoder: self.decoder,
+                                     payloadEncoder: self.encoder)
             }
         }
     }

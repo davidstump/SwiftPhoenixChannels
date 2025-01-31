@@ -150,7 +150,7 @@ class ChatRoomViewController: UIViewController {
         
         // Setup the Channel to receive and send messages
         let channel = socket.channel(topic, params: ["status": "joining"])
-        channel.on("shout").messageDecodable(of: Shout.self) { message in
+        channel.onDecodable("shout", of: Shout.self) { message in
             switch message.payload {
             case .success(let shout):
                 self.shouts.append(shout)

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		120019E52D4BA21E00EF4613 /* Channel+On.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120019E42D4BA21E00EF4613 /* Channel+On.swift */; };
 		125A9EF82543C84700292017 /* SwiftPhoenixClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1281439225410D52008615A7 /* SwiftPhoenixClient.framework */; };
 		125A9F082543C8D000292017 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 125A9EFF2543C8D000292017 /* Assets.xcassets */; };
 		125A9F092543C8D000292017 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 125A9F002543C8D000292017 /* LaunchScreen.storyboard */; };
@@ -32,7 +33,6 @@
 		12991E01254C3F1300BB8650 /* TimeoutTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12991E00254C3F1300BB8650 /* TimeoutTimer.swift */; };
 		12991E03254C3F2300BB8650 /* Push.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12991E02254C3F2300BB8650 /* Push.swift */; };
 		12991E05254C3F3300BB8650 /* Channel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12991E04254C3F3300BB8650 /* Channel.swift */; };
-		12991E07254C3F4B00BB8650 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12991E06254C3F4B00BB8650 /* Message.swift */; };
 		12991E09254C3F5B00BB8650 /* Presence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12991E08254C3F5B00BB8650 /* Presence.swift */; };
 		12991E0F254C454C00BB8650 /* SocketSpy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12991E0E254C454C00BB8650 /* SocketSpy.swift */; };
 		12991E11254C456F00BB8650 /* FakeTimerQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12991E10254C456F00BB8650 /* FakeTimerQueue.swift */; };
@@ -91,6 +91,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		120019E42D4BA21E00EF4613 /* Channel+On.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Channel+On.swift"; sourceTree = "<group>"; };
 		125A9EE42543C82800292017 /* Basic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Basic.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		125A9EFF2543C8D000292017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		125A9F012543C8D000292017 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -119,7 +120,6 @@
 		12991E00254C3F1300BB8650 /* TimeoutTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeoutTimer.swift; sourceTree = "<group>"; };
 		12991E02254C3F2300BB8650 /* Push.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Push.swift; sourceTree = "<group>"; };
 		12991E04254C3F3300BB8650 /* Channel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Channel.swift; sourceTree = "<group>"; };
-		12991E06254C3F4B00BB8650 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		12991E08254C3F5B00BB8650 /* Presence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Presence.swift; sourceTree = "<group>"; };
 		12991E0E254C454C00BB8650 /* SocketSpy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketSpy.swift; sourceTree = "<group>"; };
 		12991E10254C456F00BB8650 /* FakeTimerQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeTimerQueue.swift; sourceTree = "<group>"; };
@@ -178,6 +178,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		120019E32D4BA1FB00EF4613 /* Channel */ = {
+			isa = PBXGroup;
+			children = (
+				1284F4BF2D47C8080090D0DA /* ChannelSubscription.swift */,
+				120019E42D4BA21E00EF4613 /* Channel+On.swift */,
+			);
+			path = Channel;
+			sourceTree = "<group>";
+		};
 		125A9EFD2543C8D000292017 /* Basic */ = {
 			isa = PBXGroup;
 			children = (
@@ -226,12 +235,12 @@
 		128143AE25410DF3008615A7 /* SwiftPhoenixClient */ = {
 			isa = PBXGroup;
 			children = (
+				120019E32D4BA1FB00EF4613 /* Channel */,
 				1284F4CA2D4817A00090D0DA /* Message */,
 				1284F4C12D4801060090D0DA /* Parser */,
-				6343984B2CD0074800A2B9AC /* Core */,
 				63BBCEFE2B897AF4004A16C9 /* Serialization */,
 				12991E04254C3F3300BB8650 /* Channel.swift */,
-				12991E06254C3F4B00BB8650 /* Message.swift */,
+				12991DFA254C3EB800BB8650 /* Defaults.swift */,
 				12991DFE254C3EF900BB8650 /* HeartbeatTimer.swift */,
 				12922E212543B37B0034B257 /* PhoenixTransport.swift */,
 				12991E08254C3F5B00BB8650 /* Presence.swift */,
@@ -348,15 +357,6 @@
 				63DE6CC9272A2ECB00E2A728 /* MessageSpec.swift */,
 			);
 			path = SwiftPhoenixClientTests;
-			sourceTree = "<group>";
-		};
-		6343984B2CD0074800A2B9AC /* Core */ = {
-			isa = PBXGroup;
-			children = (
-				12991DFA254C3EB800BB8650 /* Defaults.swift */,
-				1284F4BF2D47C8080090D0DA /* ChannelSubscription.swift */,
-			);
-			path = Core;
 			sourceTree = "<group>";
 		};
 		6343984C2CD0075100A2B9AC /* Core */ = {
@@ -570,8 +570,8 @@
 				12991E09254C3F5B00BB8650 /* Presence.swift in Sources */,
 				1284F4D22D4959E20090D0DA /* OutgoingShape.swift in Sources */,
 				12991E01254C3F1300BB8650 /* TimeoutTimer.swift in Sources */,
+				120019E52D4BA21E00EF4613 /* Channel+On.swift in Sources */,
 				1284F4C92D48035C0090D0DA /* PayloadParser.swift in Sources */,
-				12991E07254C3F4B00BB8650 /* Message.swift in Sources */,
 				1284F4D02D481E960090D0DA /* PartialMessage.swift in Sources */,
 				12991DFF254C3EF900BB8650 /* HeartbeatTimer.swift in Sources */,
 				12991E03254C3F2300BB8650 /* Push.swift in Sources */,

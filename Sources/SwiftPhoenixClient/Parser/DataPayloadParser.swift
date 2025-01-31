@@ -13,18 +13,9 @@ import Foundation
 ///
 class DataPayloadParser: PayloadParser {
     
-    let payloadDecoder: PayloadDecoder
-    let payloadEncoder: PayloadEncoder
-    
-    init(
-        payloadDecoder: PayloadDecoder = PhoenixPayloadDecoder(),
-        payloadEncoder: PayloadEncoder = PhoenixPayloadEncoder()
-    ) {
-        self.payloadDecoder = payloadDecoder
-        self.payloadEncoder = payloadEncoder
-    }
-    
-    func parse(_ incomingMessage: IncomingMessage) -> Result<Data, any Error> {
+    func parse(_ incomingMessage: IncomingMessage,
+               payloadDecoder: PayloadDecoder,
+               payloadEncoder: PayloadEncoder) -> Result<Data, any Error> {
         Result {
             switch incomingMessage.payload {
             case .decided(let payloadData):
