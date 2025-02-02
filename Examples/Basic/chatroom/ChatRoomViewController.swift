@@ -175,8 +175,7 @@ class ChatRoomViewController: UIViewController {
                 print("CHANNEL: rooms:lobby joined. status <\(message.status ?? "null")>")
             }
             .receive("error") { message in
-                let payload = try! String(data: message.payload.get(), encoding: .utf8)
-                print("CHANNEL: rooms:lobby failed to join. payload <\(payload ?? "null")>  status <\(message.status ?? "null")> ")
+                print("CHANNEL: rooms:lobby failed to join. payload <\(message.payload)>  status <\(message.status ?? "null")> ")
             }
         
         self.socket.connect()
