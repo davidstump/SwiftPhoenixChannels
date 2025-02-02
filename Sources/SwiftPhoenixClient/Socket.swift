@@ -48,7 +48,7 @@ struct StateChangeCallbacks {
 /// The `Socket` constructor takes the mount point of the socket,
 /// the authentication params, as well as options that can be found in
 /// the Socket docs, such as configuring the heartbeat.
-public class Socket: PhoenixTransportDelegate {
+public class Socket: TransportDelegate {
     
     
     //----------------------------------------------------------------------
@@ -76,7 +76,7 @@ public class Socket: PhoenixTransportDelegate {
     
     /// The WebSocket transport. Default behavior is to provide a
     /// URLSessionWebsocketTask. See README for alternatives.
-    private let transport: ((URL) -> PhoenixTransport)
+    private let transport: ((URL) -> Transport)
     
     /// Phoenix serializer version, defaults to "2.0.0"
     public var vsn: String = Defaults.vsn
@@ -147,7 +147,7 @@ public class Socket: PhoenixTransportDelegate {
     var closeStatus: URLSessionWebSocketTask.CloseCode? = nil
     
     /// The connection to the server
-    var connection: PhoenixTransport? = nil
+    var connection: Transport? = nil
     
     
     //----------------------------------------------------------------------
@@ -167,7 +167,7 @@ public class Socket: PhoenixTransportDelegate {
     
     
     public init(endPoint: String,
-                transport: @escaping ((URL) -> PhoenixTransport),
+                transport: @escaping ((URL) -> Transport),
                 params: PayloadClosure? = nil) {
         self.transport = transport
         self.paramsClosure = params
@@ -254,7 +254,7 @@ public class Socket: PhoenixTransportDelegate {
     }
     
     /// - return: The state of the connect. [.connecting, .open, .closing, .closed]
-    public var connectionState: PhoenixTransportReadyState {
+    public var connectionState: TransportReadyState {
         return self.connection?.readyState ?? .closed
     }
     
