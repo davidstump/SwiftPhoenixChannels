@@ -141,7 +141,7 @@ public class Socket: TransportDelegate {
     var pendingHeartbeatRef: String?
     
     /// Timer to use when attempting to reconnect
-    var reconnectTimer: TimeoutTimer
+    var reconnectTimer: ScheduleTimer
     
     /// Close status
     var closeStatus: URLSessionWebSocketTask.CloseCode? = nil
@@ -289,7 +289,9 @@ public class Socket: TransportDelegate {
         self.teardown(code: code, reason: reason, callback: callback)
     }
     
-    internal func teardown(code: URLSessionWebSocketTask.CloseCode = .normalClosure, reason: String? = nil, callback: (() -> Void)? = nil) {
+    internal func teardown(code: URLSessionWebSocketTask.CloseCode = .normalClosure,
+                           reason: String? = nil,
+                           callback: (() -> Void)? = nil) {
         self.connection?.delegate = nil
         self.connection?.disconnect(code: code, reason: reason)
         self.connection = nil
