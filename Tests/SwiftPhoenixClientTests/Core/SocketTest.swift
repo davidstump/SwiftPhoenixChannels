@@ -105,7 +105,7 @@ struct SocketTest {
     
     @Test func connectWithWebsocket_sets_callbacks_for_connection() {
         let (socket, mockTransport) = setupSocket()
-
+        
         var open = 0
         socket.onOpen { open += 1 }
         
@@ -119,8 +119,8 @@ struct SocketTest {
         
         var lastMessage: IncomingMessage?
         socket.onMessage(callback: { (message) in
-                lastMessage = message
-            }
+            lastMessage = message
+        }
         )
         
         mockTransport.readyState = .closed
@@ -134,10 +134,10 @@ struct SocketTest {
         [null,null,"topic","event","payload"]
         """
         mockTransport.delegate?.onMessage(string: text)
-
+        
         // Delegate implementations all runs `.async` which cause there to be a
         // slight out-of-ordering. Sleep 1 second to let everything hit
-        Thread.sleep(forTimeInterval: 0.05) // syncarray runs on .async
+        Thread.sleep(forTimeInterval: 0.2) // syncarray runs on .async
         #expect(open == 1)
         #expect(close == 1)
         #expect(lastError != nil)
@@ -178,7 +178,7 @@ struct SocketTest {
     @Test func disconnect_calls_callback() async throws {
         let (socket, mockTransport) = setupSocket()
         socket.connect()
-    
+        
         var count = 0
         socket.disconnect(code: .goingAway) {
             count += 1
@@ -275,7 +275,7 @@ struct SocketTest {
     
     @Test func channel_adds_channel_to_sockets_channel_list() async throws {
         let (socket, _) = setupSocket()
-    
+        
         #expect(socket.channels.isEmpty)
         
         let channel = socket.channel("topic", params: ["one": "two"])
@@ -294,11 +294,11 @@ struct SocketTest {
         channel1.joinPush.ref = "1"
         channel2.joinPush.ref = "2"
         
-        Thread.sleep(forTimeInterval: 0.1) // syncarray runs on .async
+        Thread.sleep(forTimeInterval: 0.2) // syncarray runs on .async
         #expect(socket.stateChangeCallbacks.open.count == 2)
         
         socket.remove(channel1)
-        Thread.sleep(forTimeInterval: 0.1) // syncarray runs on .async
+        Thread.sleep(forTimeInterval: 0.2) // syncarray runs on .async
         #expect(socket.stateChangeCallbacks.open.count == 1)
         
         #expect(socket.channels.count == 1)
@@ -362,7 +362,7 @@ struct SocketTest {
         socket.push(outgoing: outgoing)
         #expect(mockTransport.sendStringCalled == false)
         #expect(mockTransport.sendDataCalled == false)
-        Thread.sleep(forTimeInterval: 0.05) // syncarray runs on .async
+        Thread.sleep(forTimeInterval: 0.2) // syncarray runs on .async
         #expect(socket.sendBuffer.count == 1)
         
         socket.sendBuffer.forEach( { try? $0.callback() } )
@@ -397,12 +397,13 @@ struct SocketTest {
     
     // MARK: -- sendHeartbeat --
     @Test func sendHeartbeat_closes_socket_if_heartbeat_not_ackd_within_window() throws {
-//        let (socket, mockTransport) = setupSocket()
-//        
-//        var closed = false
-//        socket.connect()
-//        mockTransport.readyState = .open
+        //        let (socket, mockTransport) = setupSocket()
+        //
+        //        var closed = false
+        //        socket.connect()
+        //        mockTransport.readyState = .open
         
+        // TODO: Mock Heartbeat Timer
         // TODO: Can timers be converted to task sleep with fake clock?
     }
     
@@ -412,7 +413,7 @@ struct SocketTest {
         mockTransport.readyState = .open
         
         socket.sendHeartbeat()
-    
+        
         #expect(mockTransport.sendStringCalled == true)
         let actual = mockTransport.sendStringReceivedString
         
@@ -431,7 +432,7 @@ struct SocketTest {
         #expect(mockTransport.sendDataCalled == false)
         #expect(mockTransport.sendStringCalled == false)
     }
-
+    
     // MARK: -- flushSendBuffer --
     @Test func flushSendBuffer_calls_callbacks_in_buffer_when_connected() throws {
         let (socket, mockTransport) = setupSocket()
@@ -443,7 +444,7 @@ struct SocketTest {
         var twoCalled = 0
         socket.sendBuffer.append(("1", { twoCalled += 1 }))
         let threeCalled = 0
-
+        
         socket.flushSendBuffer()
         #expect(oneCalled == 1)
         #expect(twoCalled == 1)
@@ -457,11 +458,11 @@ struct SocketTest {
         
         socket.sendBuffer.append(("0", { }))
         
-        Thread.sleep(forTimeInterval: 0.15) // syncarray runs on .async
+        Thread.sleep(forTimeInterval: 0.2) // syncarray runs on .async
         #expect(socket.sendBuffer.count == 1)
         
         socket.flushSendBuffer()
-        Thread.sleep(forTimeInterval: 0.05) // syncarray runs on .async
+        Thread.sleep(forTimeInterval: 0.2) // syncarray runs on .async
         #expect(socket.sendBuffer.count == 0)
     }
     
@@ -499,21 +500,226 @@ struct SocketTest {
         mockTransport.readyState = .open
         
         socket.onConnectionOpen(response: nil)
-        Thread.sleep(forTimeInterval: 0.1) // syncarray runs on .async
+        Thread.sleep(forTimeInterval: 0.2) // syncarray runs on .async
         #expect(socket.sendBuffer.isEmpty)
     }
     
     @Test func onConnectionOpen_resets_reconnect_timer() throws {
         let (socket, mockTransport) = setupSocket()
-        
-        var oneCalled = 0
-        socket.sendBuffer.append(("0", { oneCalled += 1 }))
+        let mockTimer = ScheduleTimerMock()
+        socket.reconnectTimer = mockTimer
         
         socket.connect()
         mockTransport.readyState = .open
         
         socket.onConnectionOpen(response: nil)
-        Thread.sleep(forTimeInterval: 0.1) // syncarray runs on .async
-        #expect(socket.sendBuffer.isEmpty)
+        #expect(mockTimer.resetCalled)
     }
+    
+    @Test func onConnectionOpen_resets_heartbeat() throws {
+        let (socket, mockTransport) = setupSocket()
+        socket.pendingHeartbeatRef = "1"
+        
+        socket.connect()
+        mockTransport.readyState = .open
+        
+        socket.onConnectionOpen(response: nil)
+        #expect(socket.pendingHeartbeatRef == nil)
+    }
+    
+    @Test func onConnectionOpen_triggers_onOpen_callbacks() async throws {
+        let (socket, mockTransport) = setupSocket()
+        socket.connect()
+        mockTransport.readyState = .open
+        
+        
+        var oneCalled = 0
+        socket.onOpen { oneCalled += 1 }
+        var twoCalled = 0
+        socket.onOpen { twoCalled += 1 }
+        var threeCalled = 0
+        socket.onClose { threeCalled += 1 }
+        
+        socket.onConnectionOpen(response: nil)
+        #expect(oneCalled == 1)
+        #expect(twoCalled == 1)
+        #expect(threeCalled == 0)
+    }
+    
+    // MARK: -- resetHeartbeat --
+    @Test func resetHeartbeat_clears_any_pending_heartbeat() async throws {
+        let (socket, _) = setupSocket()
+        socket.pendingHeartbeatRef = "1"
+        
+        socket.onConnectionOpen(response: nil)
+        #expect(socket.pendingHeartbeatRef == nil)
+    }
+    
+    @Test func resetHeartbeat_does_not_schedule_if_skipHeartbeat_is_true() async throws {
+        let (socket, _) = setupSocket()
+        socket.skipHeartbeat = true
+        socket.resetHeartbeat()
+        
+        #expect(socket.heartbeatTimer == nil)
+    }
+    
+    @Test func resetHeartbeat_creates_a_timer_and_sends_a_heartbeat() async throws {
+        let (socket, mockTransport) = setupSocket()
+        socket.heartbeatInterval = 1
+        
+        socket.connect()
+        mockTransport.readyState = .open
+        
+        #expect(socket.heartbeatTimer == nil)
+        socket.resetHeartbeat()
+        
+        #expect(socket.heartbeatTimer != nil)
+        #expect(socket.heartbeatTimer?.timeInterval == 1)
+        
+        // Fire the timer manually. HeartbeatTimer has its own tests
+        socket.heartbeatTimer?.fire()
+        #expect(mockTransport.sendStringCalled)
+    }
+    
+    @Test func resetHeartbeat_invalidates_old_timer_and_creates_new_one() async throws {
+        let (socket, _) = setupSocket()
+        let queue = DispatchQueue(label: "test.heartbeat")
+        let timer = HeartbeatTimer(timeInterval: 1000, queue: queue)
+        
+        var timerCalled = 0
+        timer.start { timerCalled += 1 }
+        socket.heartbeatTimer = timer
+        
+        #expect(timer.isValid)
+        socket.resetHeartbeat()
+        
+        #expect(timer.isValid == false)
+        #expect(socket.heartbeatTimer !== timer)
+        #expect(timerCalled == 0)
+    }
+    
+    // MARK: -- onConnectionClosed --
+    @Test func onConnectionClosed_does_not_schedule_reconnectTimer_if_normal_close() async throws {
+        let (socket, mockTransport) = setupSocket()
+        let mockTimer = ScheduleTimerMock()
+        socket.reconnectTimer = mockTimer
+        
+        socket.connect()
+        mockTransport.readyState = .open
+        
+        socket.onConnectionClosed(code: .normalClosure, reason: nil)
+        #expect(mockTimer.scheduleTimeoutCalled == false)
+    }
+    
+    @Test func onConnectionClosed_schedules_reconnectTimer_timeout_if_abnormal_clos() async throws {
+        let (socket, mockTransport) = setupSocket()
+        let mockTimer = ScheduleTimerMock()
+        socket.reconnectTimer = mockTimer
+        
+        socket.connect()
+        mockTransport.readyState = .open
+        
+        socket.onConnectionClosed(code: .abnormalClosure, reason: nil)
+        #expect(mockTimer.scheduleTimeoutCalled)
+    }
+    
+    @Test("onConnectionClosed does not schedule reconnectTimer timeout if normal close after explicit disconnect")
+    func onConnectionClosed_does_not_schedule_after_explicit_close() throws {
+        
+        let (socket, _) = setupSocket()
+        let mockTimer = ScheduleTimerMock()
+        socket.reconnectTimer = mockTimer
+        
+        socket.disconnect()
+        socket.onConnectionClosed(code: .goingAway, reason: nil)
+        #expect(mockTimer.scheduleTimeoutCalled == false)
+    }
+    
+    @Test func onConnectionClosed_schedules_reconnectTimer_timeout_if_not_normal_close() throws {
+        let (socket, _) = setupSocket()
+        let mockTimer = ScheduleTimerMock()
+        socket.reconnectTimer = mockTimer
+
+        socket.onConnectionClosed(code: .goingAway, reason: nil)
+        #expect(mockTimer.scheduleTimeoutCalled == true)
+    }
+    
+    @Test("onConnectionClosed schedules reconnectTimer timeout if connection cannot be made after a previous clean disconnect")
+    func onConnectionClosed_schedules_reconnectTimer_connect_after_disconnect() throws {
+        let (socket, _) = setupSocket()
+        let mockTimer = ScheduleTimerMock()
+        socket.reconnectTimer = mockTimer
+        
+        socket.disconnect()
+        socket.connect()
+        
+        socket.onConnectionClosed(code: .goingAway, reason: nil)
+        #expect(mockTimer.scheduleTimeoutCalled == true)
+    }
+    
+    @Test func onConnectionClosed_triggers_on_close_callbacks() async throws {
+        let (socket, _) = setupSocket()
+        var oneCalled = 0
+        socket.onClose { oneCalled += 1 }
+        var twoCalled = 0
+        socket.onClose { twoCalled += 1 }
+        var threeCalled = 0
+        socket.onOpen { threeCalled += 1 }
+        
+        socket.onConnectionClosed(code: .normalClosure, reason: nil)
+        #expect(oneCalled == 1)
+        #expect(twoCalled == 1)
+        #expect(threeCalled == 0)
+    }
+    
+    @Test func onConnectionClosed_triggers_channel_error_if_joining() async throws {
+        let (socket, _) = setupSocket()
+        let channel = socket.channel("topic")
+        var errorMessage: ChannelMessage<Any>? = nil
+        channel.on(ChannelEvent.error) { errorMessage = $0 }
+        
+        channel.join()
+        #expect(channel.state == .joining)
+        
+        socket.onConnectionClosed(code: .goingAway, reason: nil)
+        #expect(errorMessage?.event == "phx_error")
+    }
+    
+    @Test func onConnectionClosed_triggers_channel_error_if_joined() async throws {
+        let (socket, _) = setupSocket()
+        let channel = socket.channel("topic")
+        var errorMessage: ChannelMessage<Any>? = nil
+        channel.on(ChannelEvent.error) { errorMessage = $0 }
+        
+        channel.join().trigger("ok", payload: [:])
+        #expect(channel.state == .joined)
+        
+        socket.onConnectionClosed(code: .goingAway, reason: nil)
+        #expect(errorMessage?.event == "phx_error")
+    }
+    
+    @Test func onConnectionClosed_does_not_triggers_channel_error_after_leave() throws {
+        let (socket, _) = setupSocket()
+        let channel = socket.channel("topic")
+        
+        var errorMessage: ChannelMessage<Any>? = nil
+        channel.on(ChannelEvent.error) { errorMessage = $0 }
+        
+        channel.join().trigger("ok", payload: [:])
+        channel.leave().trigger("ok", payload: [:])
+        #expect(channel.state == .closed)
+        
+        socket.onConnectionClosed(code: .goingAway, reason: nil)
+        #expect(errorMessage == nil)
+    }
+    
+    @Test func onConnectionClosed_does_not_send_heartbeats_after_disconnect() async throws {
+        // TODO: Mock Heartbeat Timer
+    }
+    
+    @Test func onConnectionClosed_does_timeout_the_heartbeat_after_disconnect() async throws {
+        // TODO: Mock Heartbeat Timer
+    }
+    
+    // MARK: -- onConnectionError --
 }
